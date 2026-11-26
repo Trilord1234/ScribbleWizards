@@ -68,7 +68,7 @@ function buildPalette() {
           symName(s.k, CW().dark) +
           ' : ' +
           symDesc(s.k, CW().dark) +
-          ' En mettre plusieurs : ' +
+          ' Empilé : ' +
           stkDesc(s.k, CW().dark) +
           '.');
       b.addEventListener('click', () => addLayer(s.k));
@@ -88,19 +88,32 @@ function addLayer(k) {
     w.saw++;
     $('#hint').textContent =
       w.saw > 1
-        ? 'Dents de scie x' + w.saw + ' : ' + STK.saw + '.'
+        ? 'Niveau ' +
+          w.saw +
+          ' débloqué : ' +
+          STACK_LEVELS.saw[w.saw - 2][0] +
+          ' ! ' +
+          STACK_LEVELS.saw[w.saw - 2][1] +
+          '.'
         : "Dents de scie posées à l'extérieur du cercle.";
+    sfx(w.saw > 1 ? 'lvl' : 'add', w.saw);
   } else {
     if (w.layers.length >= MAXL) {
       $('#hint').textContent = 'Le cercle est plein ! (' + MAXL + ' dessins maximum)';
       return;
     }
     w.layers.push(k);
-    const n = w.layers.filter(x => x === k).length;
-    $('#hint').textContent =
-      n > 1
-        ? symName(k, w.dark) + ' x' + n + ' : ' + stkDesc(k, w.dark) + ' !'
+    const n = w.layers.filter(x => x === k).length,
+      pal =
+        !(w.dark && DARK[k]) && STACK_LEVELS[k] && (n === 2 || n === 3)
+          ? STACK_LEVELS[k][n - 2]
+          : null;
+    $('#hint').textContent = pal
+      ? 'Niveau ' + n + ' débloqué : ' + pal[0] + ' ! ' + pal[1] + '.'
+      : n > 1
+        ? symName(k, w.dark) + ' x' + n + ' : encore plus fort !'
         : symName(k, w.dark) + ' ajouté au centre du cercle.';
+    sfx(pal ? 'lvl' : 'add', n);
   }
   changed();
 }
@@ -128,6 +141,7 @@ function renderLayers() {
     li.append(
       mini('✕', 'Retirer une rangée', () => {
         w.saw--;
+        sfx('remove');
         changed();
       })
     );
@@ -165,6 +179,7 @@ function renderLayers() {
       }),
       mini('✕', 'Retirer', () => {
         w.layers.splice(i, 1);
+        sfx('remove');
         changed();
       })
     );
@@ -207,7 +222,15 @@ function renderReading() {
       (w.saw > 1 ? ' x' + w.saw : '') +
       ' : ' +
       SM.saw.d.replace('(Extérieur du cercle) ', '') +
-      (w.saw > 1 ? ' Empilées : ' + STK.saw + '.' : '');
+      (w.saw > 1
+        ? ' Niveau ' +
+          w.saw +
+          ' « ' +
+          STACK_LEVELS.saw[w.saw - 2][0] +
+          ' » : ' +
+          STACK_LEVELS.saw[w.saw - 2][1] +
+          '.'
+        : '');
     li.style.listStyle = 'none';
     ol.append(li);
   }
@@ -216,9 +239,20 @@ function renderReading() {
     seen[k] = (seen[k] || 0) + 1;
     const li = document.createElement('li');
     li.textContent = symName(k, w.dark) + ' : ' + symDesc(k, w.dark);
-    if (seen[k] > 1)
+    if (seen[k] > 1) {
+      const pal =
+        !(w.dark && DARK[k]) && STACK_LEVELS[k] && seen[k] <= 3
+          ? STACK_LEVELS[k][seen[k] - 2]
+          : null;
       li.textContent =
-        symName(k, w.dark) + ' encore (x' + seen[k] + ') : ' + stkDesc(k, w.dark) + '.';
+        symName(k, w.dark) +
+        ' x' +
+        seen[k] +
+        ' : ' +
+        (pal
+          ? 'Niveau ' + seen[k] + ' « ' + pal[0] + ' » : ' + pal[1] + '.'
+          : (w.dark && DSTK[k] ? DSTK[k] : 'encore plus fort') + '.');
+    }
     if (w.dark && DARK[k]) li.style.color = '#d9a6ff';
     if (seen[k] > 1) li.style.color = '#7cf2c8';
     ol.append(li);
@@ -374,6 +408,7 @@ $('#darkbtn').addEventListener('click', () => {
 document.querySelectorAll('.tab').forEach(t =>
   t.addEventListener('click', () => {
     ed = +t.dataset.i;
+    sfx('click');
     renderWizard();
   })
 );
@@ -420,6 +455,8 @@ function updUI() {
 }
 function setMode(m) {
   G.mode = m;
+  G.later = [];
+  G.timeStop = 0;
   G.projs = [];
   G.enemies = [];
   G.pickups = [];
@@ -455,7 +492,6 @@ $('#mDuel').addEventListener('click', () => {
   if (G.mode !== 'duel') setMode('duel');
 });
 $('#wave').addEventListener('click', () => {
-  sfx('pop');
   if (G.mode === 'duel') startDuel();
   else startWave();
 });
@@ -467,7 +503,15 @@ $('#rebuild').addEventListener('click', () => {
 });
 $('#mute').addEventListener('click', e => {
   muted = !muted;
-  e.currentTarget.textContent = 'Son : ' + (muted ? 'non' : 'oui');
+  e.currentTarget.textContent = 'Bruitages : ' + (muted ? 'non' : 'oui');
+});
+const mb = $('#music');
+mb.textContent = 'Musique : ' + (musicOn ? 'oui' : 'non');
+mb.addEventListener('click', () => {
+  musicOn = !musicOn;
+  store.set('sw_music', musicOn);
+  mb.textContent = 'Musique : ' + (musicOn ? 'oui' : 'non');
+  startMusic();
 });
 $('#again').addEventListener('click', () => {
   G.hearts = G.maxHearts;

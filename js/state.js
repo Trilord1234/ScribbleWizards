@@ -62,4 +62,8 @@ const G = {
   steal: 0,
   blood: 0,
   duel: { state: 'idle', t: 0 },
+  later: [],
+  timeStop: 0,
+  flash: 0,
 };
+const later = (t, fn) => G.later.push({ t, fn });

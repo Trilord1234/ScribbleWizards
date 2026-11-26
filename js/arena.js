@@ -13,8 +13,9 @@ const PROPCOL = {
   pyramid: '#d9b56a',
   tramp: '#ff7ab0',
   tomb: '#8f8a9e',
+  bigtree: '#6b4220',
 };
-const WOOD = new Set(['crate', 'barrel', 'scarecrow']);
+const WOOD = new Set(['crate', 'barrel', 'scarecrow', 'bigtree']);
 function propFactory() {
   const P = [];
   return [

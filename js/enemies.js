@@ -21,6 +21,7 @@ const EK = {
 function spawnEnemy(kind) {
   const D = EK[kind],
     m = 1 + 0.12 * (G.wave - 1);
+  sfx(kind === 'golem' ? 'horn' : kind === 'bat' ? 'squeak' : 'spawn');
   G.enemies.push({
     kind,
     x: W + 40,
@@ -86,6 +87,7 @@ function mkMage(w) {
 }
 function startWave() {
   if (G.waveActive || G.over) return;
+  sfx('horn');
   G.wave++;
   const n = G.wave,
     q = [],
@@ -107,7 +109,7 @@ function nearestCoin(e) {
     bd = 480;
   for (const c of G.pickups) {
     if (c.dead) continue;
-    const d = Math.abs(c.x - e.x);
+    const d = Math.abs(c.x - e.x) - (c.chest ? 3000 : 0);
     if (d < bd) {
       bd = d;
       best = c;
@@ -128,6 +130,7 @@ function hurtWizard() {
   if (G.hearts <= 0) {
     G.over = true;
     $('#overlay').hidden = false;
+    sfx('sad');
   }
 }
 function zoneFx(e, dt, isMage) {
@@ -151,6 +154,19 @@ function zoneFx(e, dt, isMage) {
     if (z.t === 'thorns' && Math.abs(e.x - z.x) < z.r && e.y > GROUND - 40) {
       sf *= 0.45;
       dmgEnemy(e, 8 * dt, null, true);
+    }
+    if (z.t === 'fire' && Math.abs(e.x - z.x) < z.r && e.y > GROUND - 40) {
+      e.fireT = (e.fireT || 0) - dt;
+      if (e.fireT <= 0) {
+        e.fireT = 0.6;
+        addBurn(e, 1, false, false, true);
+      }
+    }
+    if (z.t === 'ice' && Math.abs(e.x - z.x) < z.r && e.y > GROUND - 40) sf *= 0.35;
+    if (z.t === 'blizzard' && Math.abs(e.x - z.x) < z.r) sf *= 0.3;
+    if (z.t === 'pull' && d < z.r && !isMage && e.kind !== 'golem') {
+      e.x += ((z.x - e.x) / (d + 1)) * 420 * dt;
+      if (EK[e.kind].fly) e.y += (z.y - e.y) * 2 * dt;
     }
   }
   return sf;
@@ -206,7 +222,11 @@ function upMage(e, dt) {
     }
   }
   if (e.freeze > 0) e.freeze -= dt;
-  if (e.stun > 0) e.stun -= dt;
+  if (e.stun > 0) {
+    e.stun -= dt;
+    if (e.sleep > 0 && Math.random() < dt * 2)
+      part('zz', e.x + 10, e.y - 150, 20, -30, 1.2, 18, '#c8d8ff');
+  }
 }
 function upEnemy(e, dt) {
   if (e.kind === 'mage') {
@@ -320,10 +340,25 @@ function upEnemy(e, dt) {
   }
   if (e.stun > 0) {
     e.stun -= dt;
+    e.sleep = Math.max(0, (e.sleep || 0) - dt);
+    if (e.sleep > 0 && Math.random() < dt * 2)
+      part('zz', e.x + 10, e.y - e.h, 20, -30, 1.2, 18, '#c8d8ff');
     return;
   }
   if (e.happy > 0) {
     e.happy -= dt;
+    return;
+  }
+  if (e.fear > 0) {
+    e.fear -= dt;
+    e.dir = 1;
+    e.x += D.spd * 1.9 * dt;
+    if (Math.random() < 0.1)
+      part('drop', e.x, e.y - e.h, rnd(-40, 40), -120, 0.6, 3, '#bfe6ff', { g: 600 });
+    if (e.x > W + 60) {
+      e.dead = true;
+      G.score++;
+    }
     return;
   }
   if (Math.abs(e.vx) > 1) {
@@ -389,8 +424,21 @@ function upEnemy(e, dt) {
   const dir = tx < e.x ? -1 : 1;
   e.dir = dir;
   if (Math.abs(tx - e.x) > 6) e.x += dir * spd * dt;
-  if (coin && !coin.fly && coin.ground && Math.abs(coin.x - e.x) < 26 && !D.fly) {
-    if (coin.cursed) explodeCoin(coin);
+  if (
+    coin &&
+    !coin.fly &&
+    coin.ground &&
+    Math.abs(coin.x - e.x) < (coin.chest ? 40 : 26) &&
+    !D.fly
+  ) {
+    if (coin.chest) {
+      coin.dead = true;
+      for (const o of G.enemies)
+        if (!o.dead && !o.poss && o.kind !== 'mage' && Math.abs(o.x - coin.x) < 260) o.happy = 3;
+      burst(coin.x, GROUND - 30, '#ffc93c', 40, 380, 'star', 8);
+      txt(coin.x, GROUND - 120, 'Un trésor !!', '#ffc93c', 36);
+      sfx('chest');
+    } else if (coin.cursed) explodeCoin(coin);
     else {
       coin.dead = true;
       e.happy = 1.4;
@@ -399,6 +447,15 @@ function upEnemy(e, dt) {
     }
     if (e.dead) return;
   }
+  if (e.kind === 'golem') {
+    e.stepT = (e.stepT || 0) + dt;
+    if (e.stepT > 0.8) {
+      e.stepT = 0;
+      sfx('step');
+      G.shake = Math.max(G.shake, 2);
+    }
+  }
+  if (D.fly && Math.random() < dt * 0.4) sfx('squeak');
   if (D.fly) {
     const ty = e.x < WZ[0].x + 320 ? GROUND - 70 : e.cruise;
     e.y += (ty + Math.sin(e.t * 3) * 26 - e.y) * Math.min(1, 3 * dt);

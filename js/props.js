@@ -54,6 +54,20 @@ function spawnWall(x, S, dk) {
     chips(sp[0].x + sp[0].w / 2, sp[0].y + sp[0].h / 2, PROPCOL[sp[0].kind], 16, true);
   }
 }
+function spawnBigTree(x) {
+  x = G.mode === 'duel' ? clamp(x, 320, W - 320) : clamp(x, 300, W - 100);
+  G.props.push(newProp('bigtree', x - 40, 80, 250, 280));
+  for (let i = 0; i < 20; i++)
+    part('leaf', x, GROUND - 120, rnd(-250, 250), rnd(-400, -100), 1.6, 8, '#4fbf5a', {
+      g: 300,
+      vr: rnd(-6, 6),
+    });
+  chips(x, GROUND, '#5a3f22', 14, true);
+  G.shake = Math.max(G.shake, 10);
+  txt(x, GROUND - 300, 'Arbre géant !', '#9de88a', 36);
+  sfx('grow');
+  sfx('rumble');
+}
 function spawnPyramid(x) {
   x = G.mode === 'duel' ? clamp(x, 320, W - 320) : clamp(x, 300, W - 120);
   G.props.push(newProp('pyramid', x - 80, 160, 110, 260));
@@ -208,6 +222,7 @@ function addPlant(x, type, big) {
   if (tr.length > 16) G.plants.splice(G.plants.indexOf(tr[0]), 1);
   if (big) txt(x, GROUND - 260, 'Arbre géant !', '#9de88a', 32);
   if (type !== 'flower') {
+    sfx('grow');
     for (let i = 0; i < 8; i++)
       part('leaf', x, GROUND - 20, rnd(-120, 120), rnd(-200, -60), 1.2, 6, pl.c, {
         g: 300,
