@@ -19,16 +19,18 @@ function newProp(kind, x, w, h, hp, o = {}) {
       frost: 0,
       rise: 0,
       stage: 0,
+      handT: 0,
       spawned: true,
     },
     o
   );
 }
-function spawnWall(x, S) {
-  x = clamp(x, 280, W - 90);
+function spawnWall(x, S, dk) {
+  x = G.mode === 'duel' ? clamp(x, 300, W - 300) : clamp(x, 280, W - 90);
   let q;
   if (S.has('tramp')) q = newProp('tramp', x - 50, 100, 24, 999);
   else if (S.has('rampart')) q = newProp('rampart', x - 40, 80, 210, 320);
+  else if (dk) q = newProp('tomb', x - 28, 56, 96, 200);
   else q = newProp('concrete', x - 25, 50, 120, 140);
   G.props.push(q);
   for (let i = 0; i < 16; i++)
@@ -40,12 +42,12 @@ function spawnWall(x, S) {
       rnd(-120, -20),
       1,
       rnd(12, 22),
-      'rgba(200,190,170,.5)',
+      dk ? 'rgba(120,90,150,.5)' : 'rgba(200,190,170,.5)',
       { drag: 2 }
     );
   chips(x, GROUND, '#6b5a3a', 10);
   G.shake = Math.max(G.shake, 6);
-  sfx('wall');
+  sfx(dk ? 'evil' : 'wall');
   const sp = G.props.filter(p => p.spawned && !p.dead);
   if (sp.length > 9) {
     sp[0].dead = true;
@@ -53,7 +55,7 @@ function spawnWall(x, S) {
   }
 }
 function spawnPyramid(x) {
-  x = clamp(x, 300, W - 120);
+  x = G.mode === 'duel' ? clamp(x, 320, W - 320) : clamp(x, 300, W - 120);
   G.props.push(newProp('pyramid', x - 80, 160, 110, 260));
   for (let i = 0; i < 20; i++)
     part(
@@ -78,7 +80,10 @@ function hitProp(q, d, p, x, y) {
   chips(x, y, PROPCOL[q.kind], 4 + Math.min(10, (d / 5) | 0));
   if (p) {
     const k = p.spec;
-    if (k.n.flame && WOOD.has(q.kind)) q.burn = 3;
+    if (k.n.flame && WOOD.has(q.kind)) {
+      q.burn = 3;
+      q.curse = k.dark;
+    }
     if (k.n.snow) q.frost = 3;
   }
   const st = Math.min(3, Math.floor((1 - Math.max(0, q.hp) / q.max) * 3.999));
@@ -146,9 +151,40 @@ function breakProp(q) {
 }
 
 /* ---------- pickups & plants ---------- */
-function addCoin(x, y, vx, vy) {
+function addCoin(x, y, vx, vy, cursed, own) {
   if (G.pickups.length < 40)
-    G.pickups.push({ x, y, vx, vy, t: Math.random() * 5, l: 14, ground: false, dead: false });
+    G.pickups.push({
+      x,
+      y,
+      vx,
+      vy,
+      t: Math.random() * 5,
+      l: 14,
+      ground: false,
+      dead: false,
+      cursed: !!cursed,
+      own: own || null,
+      fuse: G.mode === 'duel' ? 1.5 : 5,
+    });
+}
+function explodeCoin(c) {
+  c.dead = true;
+  aoe(c.x, GROUND - 20, 110, 40, 350, c.own);
+  for (let i = 0; i < 30; i++)
+    part(
+      i % 2 ? 'spark' : 'fire',
+      c.x,
+      GROUND - 15,
+      rnd(-300, 300),
+      rnd(-350, 50),
+      rnd(0.4, 0.9),
+      rnd(5, 14),
+      i % 2 ? '#b8ff3c' : 'purple',
+      { drag: 2 }
+    );
+  G.shake = Math.max(G.shake, 10);
+  txt(c.x, GROUND - 80, 'PIÈGE !', '#b8ff3c', 34);
+  sfx('boom');
 }
 const LEAF = ['#4fbf5a', '#3aa85a', '#6fd36a', '#ffb3d1', '#f29a3a'];
 function addPlant(x, type) {

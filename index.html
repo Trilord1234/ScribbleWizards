@@ -29,17 +29,15 @@
           </div>
         </div>
         <div class="bar card">
-          <button class="btn primary" id="wave">Lancer la vague 1</button>
-          <button class="btn" id="rebuild">Reconstruire l'arène</button>
-          <button class="btn" id="mute">Son : oui</button>
-          <label>Sorcier <input type="text" id="wname" value="Merlin" maxlength="14" /></label>
-          <div class="robes" id="robes" aria-label="Couleur de la robe"></div>
+          <div class="seg">
+            <button class="segb on" id="mArena" type="button">Arène</button
+            ><button class="segb" id="mDuel" type="button">Duel</button>
+          </div>
+          <button class="btn primary" id="wave" type="button">Lancer la vague 1</button>
+          <button class="btn" id="rebuild" type="button">Reconstruire l'arène</button>
+          <button class="btn" id="mute" type="button">Son : oui</button>
         </div>
-        <p class="help">
-          Vise avec la souris ou le doigt, clique pour lancer le sort. Reste appuyé pour tirer en
-          rafale. Barre espace = tirer. Les objets se fissurent puis se cassent, et les monstres
-          s'arrêtent pour taper sur ce qui leur bloque le passage.
-        </p>
+        <p class="help" id="help"></p>
         <div class="card">
           <h2>Livre des synergies <span id="syncount"></span></h2>
           <p class="help" style="margin-bottom: 10px">
@@ -47,16 +45,36 @@
             créent un sort spécial. L'ordre compte ! Tire le sort pour le découvrir.
           </p>
           <div class="book" id="book"></div>
+          <h3>Les dessins du mage noir</h3>
+          <p class="help" style="margin-bottom: 10px">
+            Quand un sorcier devient mage noir, ces dessins changent d'effet. Les autres restent
+            pareils.
+          </p>
+          <div class="book" id="darkbook"></div>
         </div>
       </section>
 
-      <section class="card workshop">
+      <section class="card workshop" id="workshop">
         <h2>L'atelier du cercle</h2>
-        <div class="circlebox"><canvas id="cv"></canvas></div>
+        <div class="tabs">
+          <button class="tab on" data-i="0" type="button"></button
+          ><button class="tab" data-i="1" type="button" hidden></button>
+        </div>
+        <div class="row">
+          <input type="text" id="wname" maxlength="14" aria-label="Nom du sorcier" /><button
+            class="btn darkb"
+            id="darkbtn"
+            type="button"
+          >
+            Devenir mage noir
+          </button>
+        </div>
+        <div class="robes" id="robes" aria-label="Couleur de la robe"></div>
+        <div class="circlebox" style="margin-top: 12px"><canvas id="cv"></canvas></div>
         <div class="reading" id="reading"></div>
         <div class="row">
-          <button class="btn" id="undo">Retirer le dernier</button
-          ><button class="btn" id="clear">Effacer le cercle</button>
+          <button class="btn" id="undo" type="button">Retirer le dernier</button
+          ><button class="btn" id="clear" type="button">Effacer le cercle</button>
         </div>
         <h3>Les dessins des cousins</h3>
         <div class="palette" id="palette"></div>
@@ -70,6 +88,7 @@
           <input type="text" id="spellname" placeholder="Nom du sort" maxlength="24" /><button
             class="btn"
             id="save"
+            type="button"
           >
             Ranger le sort
           </button>
@@ -89,6 +108,7 @@
     <script src="js/projectiles.js"></script>
     <script src="js/props.js"></script>
     <script src="js/enemies.js"></script>
+    <script src="js/duel.js"></script>
     <script src="js/update.js"></script>
     <script src="js/render.js"></script>
     <script src="js/input.js"></script>

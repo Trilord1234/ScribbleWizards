@@ -3,21 +3,23 @@
 /* ---------- update ---------- */
 function update(dt) {
   G.time += dt;
-  G.cd -= dt;
-  if (G.firing && G.cd <= 0) fire();
-  if (G.cast) {
-    G.cast.t += dt;
-    if (G.cast.t > 0.5) G.cast = null;
-  }
-  WIZ.recoil = Math.max(0, WIZ.recoil - dt * 5);
-  WIZ.hurt = Math.max(0, WIZ.hurt - dt);
+  const w0 = WZ[0];
+  if (G.mode === 'arena') {
+    w0.cd -= dt;
+    w0.haste = Math.max(0, w0.haste - dt);
+    if (G.firing && w0.cd <= 0 && !G.over) fire(w0);
+    w0.recoil = Math.max(0, w0.recoil - dt * 5);
+    w0.hurt = Math.max(0, w0.hurt - dt);
+  } else upDuel(dt);
+  for (const c of G.cast) c.t += dt;
+  G.cast = G.cast.filter(c => c.t < 0.5);
   for (const p of G.projs) if (!p.dead) upProj(p, dt);
   G.projs = G.projs.filter(p => !p.dead);
-  // props: rise, fall, burn
   const ps = G.props.filter(q => !q.dead).sort((a, b) => b.y - a.y);
   for (const q of ps) {
     q.flash = Math.max(0, q.flash - dt);
     q.frost = Math.max(0, q.frost - dt);
+    q.handT = Math.max(0, q.handT - dt);
     if (q.rise < 1) q.rise = Math.min(1, q.rise + dt * 2.2);
     if (q.burn > 0) {
       q.burn -= dt;
@@ -31,7 +33,7 @@ function update(dt) {
           rnd(-120, -40),
           0.5,
           rnd(8, 14),
-          'orange'
+          q.curse ? 'purple' : 'orange'
         );
       if (q.hp <= 0) breakProp(q);
     }
@@ -61,16 +63,13 @@ function update(dt) {
         land = Math.min(land, r.y - q.h);
     }
     if (ny >= land) {
-      if (q.vy > 450) {
-        hitProp(q, 8, null, q.x + q.w / 2, land + q.h);
-      }
+      if (q.vy > 450) hitProp(q, 8, null, q.x + q.w / 2, land + q.h);
       q.y = land;
       q.vy = 0;
     } else q.y = ny;
   }
   G.props = G.props.filter(q => !q.dead);
-  // waves
-  if (G.waveActive && !G.over) {
+  if (G.mode === 'arena' && G.waveActive && !G.over) {
     G.spawnT -= dt;
     if (G.spawnQ.length && G.spawnT <= 0) {
       spawnEnemy(G.spawnQ.shift());
@@ -81,7 +80,7 @@ function update(dt) {
       if (G.hearts < G.maxHearts) G.hearts++;
       banner('Vague ' + G.wave + ' réussie !', 'Bravo ! Prépare ton prochain cercle.');
       sfx('win');
-      updWaveBtn();
+      updUI();
     }
   }
   for (const e of G.enemies) if (!e.dead) upEnemy(e, dt);
@@ -103,6 +102,9 @@ function update(dt) {
           c.vx *= 0.6;
         }
       }
+    } else if (c.cursed) {
+      c.fuse -= dt;
+      if (c.fuse <= 0) explodeCoin(c);
     }
     if (c.l <= 0) c.dead = true;
   }
@@ -131,6 +133,35 @@ function update(dt) {
         3,
         '#c7a8ff'
       );
+    }
+    if (z.t === 'poison' && Math.random() < 0.4)
+      part(
+        'smoke',
+        z.x + rnd(-z.r, z.r) * 0.7,
+        z.y + rnd(-z.r, z.r) * 0.4,
+        rnd(-20, 20),
+        rnd(-30, 0),
+        1,
+        rnd(14, 24),
+        'rgba(120,255,90,.25)'
+      );
+    if (z.l <= 0 && z.boom) {
+      aoe(z.x, z.y, 150, 30, 350, z.own);
+      for (let i = 0; i < 40; i++)
+        part(
+          'spark',
+          z.x,
+          z.y,
+          rnd(-420, 420),
+          rnd(-420, 300),
+          rnd(0.4, 0.9),
+          rnd(3, 6),
+          i % 2 ? '#c39bff' : '#8dff6a',
+          { drag: 2 }
+        );
+      G.shake = 12;
+      txt(z.x, z.y - 40, 'BADABOUM !', '#c39bff', 36);
+      sfx('boom');
     }
   }
   G.zones = G.zones.filter(z => z.l > 0);
@@ -170,6 +201,17 @@ function update(dt) {
     if (G.banner.l <= 0) G.banner = null;
   }
   G.shake = Math.max(0, G.shake - dt * 30);
+  const anyDark = G.mode === 'duel' ? WZ.some(w => w.dark) : WZ[0].dark;
+  G.blood += ((anyDark ? 1 : 0) - G.blood) * Math.min(1, dt * 2);
   if (Math.random() < dt * 2.5)
-    part('fly', rnd(200, W), rnd(480, 760), rnd(-15, 15), rnd(-10, 10), rnd(3, 6), 3, '#e4ff8a');
+    part(
+      'fly',
+      rnd(200, W),
+      rnd(480, 760),
+      rnd(-15, 15),
+      rnd(-10, 10),
+      rnd(3, 6),
+      3,
+      G.blood > 0.5 ? '#ff6b8a' : '#e4ff8a'
+    );
 }
