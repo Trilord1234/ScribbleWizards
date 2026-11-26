@@ -14,12 +14,42 @@
   <body>
     <header>
       <h1>Scribble Wizards</h1>
-      <p>Dessine ton cercle, ajoute des symboles, et lance ton sort !</p>
+      <p>Ouvre le grimoire pour dessiner ton cercle, puis lance tes sorts !</p>
     </header>
     <main>
-      <section class="arena-col">
+      <div class="stage">
         <div class="arena" id="arena">
+          <canvas id="bgc"></canvas>
           <canvas id="game"></canvas>
+          <button class="bookbtn" id="bookbtn" type="button" aria-label="Ouvrir le grimoire">
+            <svg viewBox="0 0 40 40" aria-hidden="true">
+              <path
+                d="M5 9c5-2.5 10-1.5 15 2v23c-5-3.5-10-4.5-15-2z"
+                fill="#f2e4c0"
+                stroke="#2a1206"
+                stroke-width="2"
+                stroke-linejoin="round"
+              />
+              <path
+                d="M35 9c-5-2.5-10-1.5-15 2v23c5-3.5 10-4.5 15-2z"
+                fill="#e4cf9c"
+                stroke="#2a1206"
+                stroke-width="2"
+                stroke-linejoin="round"
+              />
+              <circle cx="12.5" cy="20" r="4.2" fill="none" stroke="#c0392b" stroke-width="1.6" />
+              <path
+                d="M12.5 16.6l1 2.4h2.4l-2 1.5.8 2.4-2.2-1.5-2.2 1.5.8-2.4-2-1.5h2.4z"
+                fill="#c0392b"
+              />
+              <path
+                d="M24 16h7M24 20h7M24 24h5"
+                stroke="#6b2a10"
+                stroke-width="1.6"
+                stroke-linecap="round"
+              /></svg
+            ><span>Grimoire</span>
+          </button>
           <div class="overlay" id="overlay" hidden>
             <div>
               <strong>Ton sorcier est tout étourdi !</strong>
@@ -28,75 +58,98 @@
             </div>
           </div>
         </div>
-        <div class="bar card">
+        <div class="bar">
           <div class="seg">
             <button class="segb on" id="mArena" type="button">Arène</button
             ><button class="segb" id="mDuel" type="button">Duel</button>
           </div>
           <button class="btn primary" id="wave" type="button">Lancer la vague 1</button>
           <button class="btn" id="rebuild" type="button">Reconstruire l'arène</button>
+          <button class="btn leather" id="bookbtn2" type="button">Ouvrir le grimoire</button>
           <button class="btn" id="mute" type="button">Bruitages : oui</button>
           <button class="btn" id="music" type="button">Musique : oui</button>
+          <button class="btn" id="qual" type="button">Qualité : Auto</button>
         </div>
         <p class="help" id="help"></p>
-        <div class="card">
-          <h2>Livre des synergies <span id="syncount"></span></h2>
-          <p class="help" style="margin-bottom: 10px">
-            Certains dessins posés <b>juste l'un après l'autre</b> (de l'extérieur vers l'intérieur)
-            créent un sort spécial. L'ordre compte ! Tire le sort pour le découvrir.
-          </p>
-          <div class="book" id="book"></div>
-          <h3>Les dessins du mage noir</h3>
-          <p class="help" style="margin-bottom: 10px">
-            Quand un sorcier devient mage noir, ces dessins changent d'effet. Les autres restent
-            pareils.
-          </p>
-          <div class="book" id="darkbook"></div>
-        </div>
-      </section>
+      </div>
+    </main>
 
-      <section class="card workshop" id="workshop">
-        <h2>L'atelier du cercle</h2>
-        <div class="tabs">
+    <div class="bookov" id="bookov" hidden>
+      <div class="tome" id="tome" role="dialog" aria-modal="true" aria-label="Grimoire">
+        <div class="ribbons">
           <button class="tab on" data-i="0" type="button"></button
           ><button class="tab" data-i="1" type="button" hidden></button>
         </div>
-        <div class="row">
-          <input type="text" id="wname" maxlength="14" aria-label="Nom du sorcier" /><button
-            class="btn darkb"
-            id="darkbtn"
-            type="button"
-          >
-            Devenir mage noir
+        <button class="closeb" id="closeb" type="button" aria-label="Fermer le grimoire">✕</button>
+        <section class="page left">
+          <h2>Le cercle magique</h2>
+          <div class="who">
+            <input type="text" id="wname" maxlength="14" aria-label="Nom du sorcier" /><button
+              class="btn darkb"
+              id="darkbtn"
+              type="button"
+            >
+              Devenir mage noir
+            </button>
+          </div>
+          <div class="robes" id="robes" aria-label="Couleur de la robe"></div>
+          <div class="circlebox" id="circlebox" title="Clique pour retirer le dernier dessin">
+            <canvas id="cv"></canvas>
+          </div>
+          <ol class="layers" id="layers"></ol>
+          <div class="row">
+            <button class="btn" id="undo" type="button">Retirer le dernier</button
+            ><button class="btn" id="clear" type="button">Effacer le cercle</button>
+          </div>
+          <div class="reading" id="reading"></div>
+        </section>
+        <section class="page right">
+          <div class="ptabs">
+            <button class="ptab on" data-p="draw" type="button">Dessins</button
+            ><button class="ptab" data-p="syn" type="button">
+              Synergies <span id="syncount"></span></button
+            ><button class="ptab" data-p="grim" type="button">Mes sorts</button>
+          </div>
+          <div class="pview" id="p-draw">
+            <h3>Les dessins des cousins</h3>
+            <div class="palette" id="palette"></div>
+            <h3>Dessins bonus</h3>
+            <div class="palette" id="palette2"></div>
+            <p class="hint" id="hint">
+              Touche un dessin pour l'ajouter à l'intérieur du cercle (de l'extérieur vers
+              l'intérieur).
+            </p>
+          </div>
+          <div class="pview" id="p-syn" hidden>
+            <p class="small">
+              Certains dessins posés <b>juste l'un après l'autre</b> créent un sort spécial. L'ordre
+              compte ! Tire le sort pour le découvrir.
+            </p>
+            <div class="synb" id="synbook"></div>
+            <h3>Les dessins du mage noir</h3>
+            <div class="synb" id="darkbook"></div>
+          </div>
+          <div class="pview" id="p-grim" hidden>
+            <p class="small">
+              Range ton cercle pour le retrouver plus tard. Touche un sort pour le recharger.
+            </p>
+            <div class="row">
+              <input type="text" id="spellname" placeholder="Nom du sort" maxlength="24" /><button
+                class="btn"
+                id="save"
+                type="button"
+              >
+                Ranger le sort
+              </button>
+            </div>
+            <div class="chips" id="grim"></div>
+          </div>
+          <button class="btn primary go" id="closego" type="button">
+            Fermer le livre et jouer
           </button>
-        </div>
-        <div class="robes" id="robes" aria-label="Couleur de la robe"></div>
-        <div class="circlebox" style="margin-top: 12px"><canvas id="cv"></canvas></div>
-        <div class="reading" id="reading"></div>
-        <div class="row">
-          <button class="btn" id="undo" type="button">Retirer le dernier</button
-          ><button class="btn" id="clear" type="button">Effacer le cercle</button>
-        </div>
-        <h3>Les dessins des cousins</h3>
-        <div class="palette" id="palette"></div>
-        <h3>Dessins bonus <small>(inventés en plus)</small></h3>
-        <div class="palette" id="palette2"></div>
-        <p class="hint" id="hint">Touche un dessin pour l'ajouter à l'intérieur du cercle.</p>
-        <h3>Ordre du cercle <small>extérieur → intérieur</small></h3>
-        <ol class="layers" id="layers"></ol>
-        <h3>Grimoire</h3>
-        <div class="row">
-          <input type="text" id="spellname" placeholder="Nom du sort" maxlength="24" /><button
-            class="btn"
-            id="save"
-            type="button"
-          >
-            Ranger le sort
-          </button>
-        </div>
-        <div class="chips" id="grim" style="margin-top: 10px"></div>
-      </section>
-    </main>
+        </section>
+      </div>
+    </div>
 
     <script src="js/data.js"></script>
     <script src="js/utils.js"></script>
