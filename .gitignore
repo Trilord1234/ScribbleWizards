@@ -1,0 +1,22 @@
+# OS files
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Editors
+.vscode/
+.idea/
+*.swp
+
+# Dependencies and builds (for future desktop / mobile builds)
+node_modules/
+dist/
+build/
+android/
+ios/
+*.apk
+*.aab
+
+# Logs
+*.log
+npm-debug.log*
