@@ -106,6 +106,50 @@ const SYMS = [
 ];
 const SM = {};
 SYMS.forEach(s => (SM[s.k] = s));
+const STK = {
+  heart: "chaque cœur en plus double encore les balles (jusqu'à 8)",
+  square: 'parpaing plus gros et plus lourd, il cogne encore plus fort',
+  triangle: 'triangles plus grands',
+  saw: "jusqu'à 3 rangées de dents : traverse et coupe encore plus",
+  mountain: 'encore plus géante',
+  gravity: 'tombe plus fort, BOUM plus grand',
+  flame: 'brûle plus fort (et chaque tir ajoute du feu)',
+  snow: 'gèle plus longtemps (et chaque tir rajoute du gel)',
+  bite: 'mord plus fort et plus de fois',
+  ghost: 'traverse aussi les monstres',
+  zigzag: "encore plus n'importe comment",
+  dots: 'encore plus de petites balles',
+  arrow: 'encore plus rapide',
+  fish: 'poisson plus gros… à 3 poissons, une baleine !',
+  egg: 'plus de morceaux',
+  cushion: 'plus de rebonds',
+  tree: "plus d'arbres… à 3, un arbre géant !",
+  coin: 'plus de pièces',
+  wall: 'une rangée de murs',
+  star: "feu d'artifice plus grand et plus fort",
+  bolt: "l'éclair saute sur plus de cibles",
+  magnet: 'tourne plus vite vers la cible',
+  bubble: 'bulle qui dure plus longtemps',
+  hourglass: 'zone plus grande, temps encore plus lent',
+};
+const DSTK = {
+  heart: 'vole plus de vie',
+  flame: 'feu maudit plus fort',
+  snow: 'gèle plus longtemps',
+  bite: 'vole plus de vie',
+  ghost: 'possession plus longue',
+  zigzag: 'plus de chauves-souris',
+  gravity: 'trou noir plus long',
+  fish: 'piranha plus gros',
+  tree: 'ronces plus larges',
+  coin: 'plus de pièces piégées',
+  wall: 'une rangée de tombes',
+  star: 'aspire plus fort',
+  bubble: 'nuage de poison plus grand',
+  hourglass: 'tire vite plus longtemps',
+  egg: "plus d'araignées",
+};
+const stkDesc = (k, dk) => (dk && DSTK[k] ? DSTK[k] : STK[k]);
 const DARK = {
   heart: {
     n: 'Cœur noir',

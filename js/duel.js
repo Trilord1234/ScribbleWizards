@@ -111,7 +111,7 @@ function upDuel(dt) {
     const e = w.ent;
     if (!e || e.ko || e.freeze > 0 || e.stun > 0 || e.bubble > 0 || e.air || e.loveT > 0) continue;
     let rate = w.haste > 0 ? 2 : 1;
-    rate *= e.slow < 1 ? 0.4 : 1;
+    rate *= clamp(e.slow * 1.6, 0.15, 1);
     w.cd -= dt * rate;
     if (w.cd <= 0) {
       const foe = WZ[1 - w.i].ent;
