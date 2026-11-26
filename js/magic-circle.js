@@ -1,6 +1,6 @@
 /* Scribble Wizards — magic-circle.js
    Drawing of every symbol and of the magic circle (with sprite cache for performance). */
-/* ---------- symbol drawings (child-drawing style) ---------- */
+/* ---------- symbol drawings ---------- */
 function drawSym(c, k, s, col) {
   c.save();
   c.strokeStyle = col;
@@ -330,10 +330,10 @@ function drawSym(c, k, s, col) {
 }
 
 /* ---------- magic circle ---------- */
-function drawCircle(c, R, ls, sw, t, alpha = 1, glow = true) {
+function drawCircle(c, R, ls, sw, t, alpha = 1, glow = true, dk = false) {
   c.save();
   c.globalAlpha *= alpha;
-  const gold = '#f6c453';
+  const gold = dk ? '#c27bff' : '#f6c453';
   const ring = r => {
     c.beginPath();
     c.arc(0, 0, r, 0, TAU);
@@ -348,8 +348,8 @@ function drawCircle(c, R, ls, sw, t, alpha = 1, glow = true) {
   ring(R);
   ring(R * 0.93);
   c.save();
-  c.rotate(t * 0.12);
-  c.fillStyle = gold;
+  c.rotate(t * (dk ? -0.12 : 0.12));
+  c.fillStyle = dk ? '#8dff6a' : gold;
   for (let i = 0; i < 40; i++) {
     const a = (i / 40) * TAU;
     c.save();
@@ -368,7 +368,7 @@ function drawCircle(c, R, ls, sw, t, alpha = 1, glow = true) {
   if (sw) {
     c.save();
     c.rotate(-t * 1.1);
-    c.fillStyle = SM.saw.c;
+    c.fillStyle = symCol('saw', dk);
     if (glow) c.shadowColor = '#fff';
     const n = 30;
     c.beginPath();
@@ -393,7 +393,7 @@ function drawCircle(c, R, ls, sw, t, alpha = 1, glow = true) {
       ri = ro - band,
       rm = (ro + ri) / 2,
       s = band * 0.78,
-      col = SM[k].c;
+      col = symCol(k, dk);
     c.strokeStyle = col;
     if (glow) {
       c.shadowColor = col;
@@ -418,21 +418,32 @@ function drawCircle(c, R, ls, sw, t, alpha = 1, glow = true) {
   c.rotate(-t * 0.5);
   c.strokeStyle = gold;
   c.lineWidth = Math.max(1.2, R * 0.012);
-  for (let i = 0; i < 2; i++) {
+  if (dk) {
     c.beginPath();
-    for (let j = 0; j < 3; j++) {
-      const a = (j / 3) * TAU + (i * Math.PI) / 3 - Math.PI / 2;
+    for (let j = 0; j < 5; j++) {
+      const a = ((j * 2) / 5) * TAU - Math.PI / 2;
       j
         ? c.lineTo(Math.cos(a) * rc * 0.8, Math.sin(a) * rc * 0.8)
         : c.moveTo(Math.cos(a) * rc * 0.8, Math.sin(a) * rc * 0.8);
     }
     c.closePath();
     c.stroke();
-  }
+  } else
+    for (let i = 0; i < 2; i++) {
+      c.beginPath();
+      for (let j = 0; j < 3; j++) {
+        const a = (j / 3) * TAU + (i * Math.PI) / 3 - Math.PI / 2;
+        j
+          ? c.lineTo(Math.cos(a) * rc * 0.8, Math.sin(a) * rc * 0.8)
+          : c.moveTo(Math.cos(a) * rc * 0.8, Math.sin(a) * rc * 0.8);
+      }
+      c.closePath();
+      c.stroke();
+    }
   c.restore();
   const g = c.createRadialGradient(0, 0, 0, 0, 0, rc * 0.6);
-  g.addColorStop(0, 'rgba(255,245,200,.9)');
-  g.addColorStop(1, 'rgba(246,196,83,0)');
+  g.addColorStop(0, dk ? 'rgba(200,255,170,.9)' : 'rgba(255,245,200,.9)');
+  g.addColorStop(1, dk ? 'rgba(140,60,255,0)' : 'rgba(246,196,83,0)');
   c.fillStyle = g;
   c.shadowBlur = 0;
   c.beginPath();
