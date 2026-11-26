@@ -10,7 +10,7 @@ function mkWiz(i) {
     robe: d.robe || (i ? '#e0457b' : '#6b4cff'),
     name: d.name || (i ? 'Morgane' : 'Merlin'),
     layers: cleanL(d.layers || (i ? ['fish', 'bite', 'arrow'] : ['flame'])),
-    saw: !!d.saw,
+    saw: clamp(Number(d.saw) || 0, 0, 3),
     dark: !!d.dark,
     hurt: 0,
     recoil: 0,

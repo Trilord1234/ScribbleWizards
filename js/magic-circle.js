@@ -365,23 +365,24 @@ function drawCircle(c, R, ls, sw, t, alpha = 1, glow = true, dk = false) {
     c.restore();
   }
   c.restore();
-  if (sw) {
+  for (let q = 0; q < (sw | 0); q++) {
+    const r0 = R * (1.01 + q * 0.1);
     c.save();
-    c.rotate(-t * 1.1);
+    c.rotate((q % 2 ? 1 : -1) * t * 1.1);
     c.fillStyle = symCol('saw', dk);
     if (glow) c.shadowColor = '#fff';
-    const n = 30;
+    const n = 30 + q * 6;
     c.beginPath();
     for (let i = 0; i < n; i++) {
       const a = (i / n) * TAU,
         b = ((i + 0.55) / n) * TAU,
         e = ((i + 1) / n) * TAU;
-      c.lineTo(Math.cos(a) * R * 1.01, Math.sin(a) * R * 1.01);
-      c.lineTo(Math.cos(b) * R * 1.13, Math.sin(b) * R * 1.13);
-      c.lineTo(Math.cos(e) * R * 1.01, Math.sin(e) * R * 1.01);
+      c.lineTo(Math.cos(a) * r0, Math.sin(a) * r0);
+      c.lineTo(Math.cos(b) * (r0 + R * 0.12), Math.sin(b) * (r0 + R * 0.12));
+      c.lineTo(Math.cos(e) * r0, Math.sin(e) * r0);
     }
     c.closePath();
-    c.globalAlpha *= 0.9;
+    c.globalAlpha *= 0.9 - q * 0.15;
     c.fill();
     c.restore();
   }

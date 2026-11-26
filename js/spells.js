@@ -4,6 +4,8 @@
 function compile(ls, sw, dk) {
   const n = {};
   ls.forEach(k => (n[k] = (n[k] || 0) + 1));
+  sw = sw | 0;
+  if (sw) n.saw = sw;
   const seq = sw ? ['saw', ...ls] : ls.slice(),
     syn = new Set();
   for (let i = 0; i < seq.length - 1; i++)
@@ -46,4 +48,5 @@ const FISH = [
   { n: 'Sardine', b: '#b9cfe0', f: '#7f97ad' },
 ];
 const SAWFISH = { n: 'Poisson-scie', b: '#7f93a6', f: '#5d7186', saw: 1, shark: 1 };
+const WHALE = { n: 'Baleine', b: '#3a6fb0', f: '#2a5590', belly: '#dfefff', whale: 1 };
 const PIRANHA = { n: 'Piranha', b: '#5a6470', f: '#3c434c', belly: '#ff4d4d', teeth: 1 };

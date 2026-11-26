@@ -81,10 +81,11 @@ function hitProp(q, d, p, x, y) {
   if (p) {
     const k = p.spec;
     if (k.n.flame && WOOD.has(q.kind)) {
+      q.burnS = Math.min(10, (q.burn > 0 ? q.burnS || 1 : 0) + k.n.flame);
       q.burn = 3;
       q.curse = k.dark;
     }
-    if (k.n.snow) q.frost = 3;
+    if (k.n.snow) q.frost = Math.min(8, (q.frost || 0) + 2 + k.n.snow);
   }
   const st = Math.min(3, Math.floor((1 - Math.max(0, q.hp) / q.max) * 3.999));
   if (st > q.stage) {
@@ -187,13 +188,13 @@ function explodeCoin(c) {
   sfx('boom');
 }
 const LEAF = ['#4fbf5a', '#3aa85a', '#6fd36a', '#ffb3d1', '#f29a3a'];
-function addPlant(x, type) {
+function addPlant(x, type, big) {
   const pl = {
     x,
     type,
     g: 0,
     seed: (Math.random() * 1e9) | 0,
-    h: rnd(0.8, 1.25),
+    h: big || rnd(0.8, 1.25),
     c:
       type === 'tree'
         ? LEAF[(Math.random() * LEAF.length) | 0]
@@ -205,6 +206,7 @@ function addPlant(x, type) {
     tr = G.plants.filter(p => p.type !== 'flower');
   if (fl.length > 50) G.plants.splice(G.plants.indexOf(fl[0]), 1);
   if (tr.length > 16) G.plants.splice(G.plants.indexOf(tr[0]), 1);
+  if (big) txt(x, GROUND - 260, 'Arbre géant !', '#9de88a', 32);
   if (type !== 'flower') {
     for (let i = 0; i < 8; i++)
       part('leaf', x, GROUND - 20, rnd(-120, 120), rnd(-200, -60), 1.2, 6, pl.c, {
