@@ -14,6 +14,7 @@ const PROPCOL = {
   tramp: '#ff7ab0',
   tomb: '#8f8a9e',
   bigtree: '#6b4220',
+  slab: '#8f8a99',
 };
 const WOOD = new Set(['crate', 'barrel', 'scarecrow', 'bigtree']);
 function propFactory() {
@@ -70,18 +71,91 @@ function buildArena() {
   add('barrel', 1440, GROUND - 62, 46, 62, 40);
   return P;
 }
+const DUEL_MAPS = [
+  {
+    n: 'Le mur du château',
+    b: add => {
+      for (let col = 0; col < 2; col++)
+        for (let row = 0; row < 5; row++)
+          add('brick', W / 2 - 46 + col * 46, GROUND - (row + 1) * 31, 46, 31, 28);
+      add('crate', 470, GROUND - 56, 56, 56, 30);
+      add('vase', 481, GROUND - 100, 34, 44, 12);
+      add('crate', W - 526, GROUND - 56, 56, 56, 30);
+      add('vase', W - 515, GROUND - 100, 34, 44, 12);
+      add('barrel', 620, GROUND - 62, 46, 62, 40);
+      add('barrel', W - 666, GROUND - 62, 46, 62, 40);
+    },
+  },
+  {
+    n: 'La forêt enchantée',
+    b: add => {
+      add('bigtree', W / 2 - 40, GROUND - 250, 80, 250, 300, { stack: false });
+      add('bigtree', 500, GROUND - 180, 60, 180, 160, { stack: false });
+      add('bigtree', W - 560, GROUND - 180, 60, 180, 160, { stack: false });
+      add('crate', 660, GROUND - 56, 56, 56, 30);
+      add('crate', W - 716, GROUND - 56, 56, 56, 30);
+      add('vase', 671, GROUND - 100, 34, 44, 12);
+      add('vase', W - 705, GROUND - 100, 34, 44, 12);
+    },
+  },
+  {
+    n: 'Les ruines célestes',
+    b: add => {
+      add('pillar', W / 2 - 27, GROUND - 150, 54, 150, 170, { stack: false });
+      add('slab', W / 2 - 90, 430, 180, 26, 140, { stack: false });
+      add('vase', W / 2 - 17, 386, 34, 44, 12);
+      add('slab', 430, 545, 150, 24, 110, { stack: false });
+      add('slab', W - 580, 545, 150, 24, 110, { stack: false });
+      add('pillar', 600, GROUND - 110, 44, 110, 120, { stack: false });
+      add('pillar', W - 644, GROUND - 110, 44, 110, 120, { stack: false });
+    },
+  },
+  {
+    n: 'Le champ de tonneaux',
+    b: add => {
+      const c = W / 2;
+      [
+        [c - 69, 0],
+        [c - 23, 0],
+        [c + 23, 0],
+        [c - 46, 1],
+        [c, 1],
+        [c - 23, 2],
+        [520, 0],
+        [566, 0],
+        [543, 1],
+        [W - 566, 0],
+        [W - 612, 0],
+        [W - 589, 1],
+      ].forEach(([x, r]) => add('barrel', x, GROUND - 62 * (r + 1), 46, 62, 40));
+      add('vase', c - 17, GROUND - 230, 34, 44, 12);
+    },
+  },
+  {
+    n: 'Les deux tours',
+    b: add => {
+      for (const bx of [420, W - 512])
+        for (let col = 0; col < 2; col++)
+          for (let row = 0; row < 6; row++)
+            add('brick', bx + col * 46, GROUND - (row + 1) * 31, 46, 31, 28);
+      add('crate', W / 2 - 28, GROUND - 56, 56, 56, 30);
+      add('vase', W / 2 - 17, GROUND - 100, 34, 44, 12);
+      add('scarecrow', W / 2 - 140, GROUND - 130, 56, 130, 90, { stack: false });
+      add('scarecrow', W / 2 + 84, GROUND - 130, 56, 130, 90, { stack: false });
+    },
+  },
+];
 function buildDuel() {
   const [P, add] = propFactory();
-  for (let col = 0; col < 2; col++)
-    for (let row = 0; row < 5; row++)
-      add('brick', W / 2 - 46 + col * 46, GROUND - (row + 1) * 31, 46, 31, 28);
-  add('crate', 470, GROUND - 56, 56, 56, 30);
-  add('vase', 481, GROUND - 100, 34, 44, 12);
-  add('crate', W - 526, GROUND - 56, 56, 56, 30);
-  add('vase', W - 515, GROUND - 100, 34, 44, 12);
-  add('barrel', 620, GROUND - 62, 46, 62, 40);
-  add('barrel', W - 666, GROUND - 62, 46, 62, 40);
+  DUEL_MAPS[G.duelMap % DUEL_MAPS.length].b(add);
   return P;
+}
+function pickMap() {
+  let n;
+  do {
+    n = (Math.random() * DUEL_MAPS.length) | 0;
+  } while (n === G.duelMap && DUEL_MAPS.length > 1);
+  G.duelMap = n;
 }
 G.props = buildArena();
 const propTop = q => q.y + q.h * (1 - easeBack(q.rise));

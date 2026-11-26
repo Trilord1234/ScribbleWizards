@@ -4,10 +4,9 @@
 const pv = $('#cv'),
   pctx = pv.getContext('2d');
 function sizePreview() {
-  const r = pv.getBoundingClientRect(),
-    d = window.devicePixelRatio || 1;
-  pv.width = Math.max(1, r.width * d);
-  pv.height = Math.max(1, r.height * d);
+  const d = window.devicePixelRatio || 1;
+  pv.width = Math.max(1, pv.clientWidth * d);
+  pv.height = Math.max(1, pv.clientHeight * d);
 }
 const ro2 = new ResizeObserver(sizePreview);
 ro2.observe(pv);
@@ -59,6 +58,11 @@ function buildPalette() {
       b.type = 'button';
       b.dataset.k = s.k;
       b.append(icon(s.k, 38, dk));
+      const cs = document.createElement('span');
+      cs.className = 'cost';
+      cs.textContent = COST[s.k] || 1;
+      cs.title = 'Coût en magie';
+      b.append(cs);
       const sp = document.createElement('span');
       sp.textContent = symName(s.k, dk) + (s.ext ? ' (ext.)' : '');
       b.append(sp);
@@ -80,6 +84,26 @@ function buildPalette() {
 }
 function addLayer(k) {
   const w = CW();
+  if (G.mode === 'duel' && G.budget && spellCost(w) + (COST[k] || 1) > G.budget) {
+    $('#hint').textContent =
+      'Pas assez de magie ! Ce dessin coûte ' +
+      (COST[k] || 1) +
+      ' et il reste ' +
+      Math.max(0, G.budget - spellCost(w)) +
+      '. Retire un dessin ou choisis un budget plus grand.';
+    sfx('remove');
+    const m = $('#mana');
+    m.animate &&
+      m.animate(
+        [
+          { transform: 'translateX(-6px)' },
+          { transform: 'translateX(6px)' },
+          { transform: 'none' },
+        ],
+        { duration: 250 }
+      );
+    return;
+  }
   if (k === 'saw') {
     if (w.saw >= 3) {
       $('#hint').textContent = '3 rangées de dents de scie maximum !';
@@ -121,7 +145,33 @@ function changed() {
   saveW(CW());
   renderLayers();
   renderReading();
+  renderMana();
   G.needDraw = true;
+}
+function renderMana() {
+  const m = $('#mana'),
+    w = CW(),
+    on = G.mode === 'duel' && G.budget > 0;
+  m.hidden = !on;
+  document
+    .querySelectorAll('.sym')
+    .forEach(b =>
+      b.classList.toggle('too', on && spellCost(w) + (COST[b.dataset.k] || 1) > G.budget)
+    );
+  if (!on) return;
+  const c = spellCost(w);
+  m.classList.toggle('over', c > G.budget);
+  m.textContent = '';
+  const lab = document.createElement('span');
+  lab.textContent = 'Magie : ' + c + ' / ' + G.budget + (c > G.budget ? ' (trop cher !)' : '');
+  const g = document.createElement('div');
+  g.className = 'gems';
+  for (let i = 0; i < Math.max(G.budget, c); i++) {
+    const d = document.createElement('span');
+    d.className = 'gem' + (i < c ? ' on' : '');
+    g.append(d);
+  }
+  m.append(lab, g);
 }
 function renderLayers() {
   const w = CW(),
@@ -430,10 +480,16 @@ function renderWizard() {
   buildPalette();
   renderLayers();
   renderReading();
+  renderMana();
+  $('#covername').textContent = w.name;
 }
 function updUI() {
   const duel = G.mode === 'duel',
     b = $('#wave');
+  $('#budget').hidden = !duel;
+  document
+    .querySelectorAll('#budget .segb')
+    .forEach(x => x.classList.toggle('on', +x.dataset.b === G.budget));
   $('#mArena').classList.toggle('on', !duel);
   $('#mDuel').classList.toggle('on', duel);
   $('#rebuild').hidden = duel;
@@ -442,7 +498,7 @@ function updUI() {
     b.disabled = s === 'count' || s === 'fight';
     b.textContent = s === 'end' ? 'Revanche !' : s === 'idle' ? 'Lancer le duel' : 'Duel en cours…';
     $('#help').textContent =
-      "Duel : touchez le petit cercle d'un sorcier en haut de l'écran (ou « Ouvrir le grimoire ») pour dessiner son cercle, puis lancez le duel. Les sorciers visent et tirent tout seuls. Le jeu se met en pause quand le grimoire est ouvert. Touche G = grimoire.";
+      "Duel : touchez le petit cercle d'un sorcier en haut de l'écran (ou « Ouvrir le grimoire ») pour dessiner son cercle, puis lancez le duel. Choisissez d'abord la magie disponible (chaque dessin a un prix), puis lancez le duel : les sorciers bougent, esquivent et tirent tout seuls, et les sorts peuvent s'entrechoquer. Touche G = grimoire.";
   } else {
     b.disabled = G.waveActive;
     b.textContent = G.waveActive
@@ -452,6 +508,7 @@ function updUI() {
       'Vise avec la souris ou le doigt, clique pour lancer le sort, reste appuyé pour tirer en rafale (ou barre espace). Touche le cercle en haut à droite, le bouton Grimoire ou la touche G pour modifier ton sort : le jeu se met en pause pendant ce temps.';
   }
   renderTabs();
+  requestAnimationFrame(fitTwice);
 }
 function setMode(m) {
   G.mode = m;
@@ -472,8 +529,13 @@ function setMode(m) {
     w.ent = null;
     w.haste = 0;
     w.hurt = 0;
+    w.x = w.i ? W - 150 : 150;
+    w.vx = 0;
+    w.shield = 0;
+    w.shieldCd = 0;
   });
   if (m === 'duel') {
+    pickMap();
     G.props = buildDuel();
     setupDuel();
     G.duel = { state: 'idle', t: 0 };
@@ -488,8 +550,14 @@ function setMode(m) {
 const bookov = $('#bookov');
 let bookOpen = false,
   lastFocus = null;
+const reduceMo = matchMedia('(prefers-reduced-motion: reduce)');
+let openAnim = null;
 function openBook(i) {
   if (i != null && (i === 0 || G.mode === 'duel')) ed = i;
+  if (bookOpen) {
+    renderWizard();
+    return;
+  }
   bookOpen = true;
   G.paused = true;
   G.firing = false;
@@ -497,13 +565,79 @@ function openBook(i) {
   bookov.hidden = false;
   renderWizard();
   sizePreview();
-  sfx('click');
+  const tome = $('#tome'),
+    cover = $('#cover');
+  tome.classList.remove('anim');
+  if (innerWidth > 880 && !reduceMo.matches && tome.animate) {
+    cover.hidden = false;
+    tome.classList.add('closed');
+    const src =
+        (document.activeElement &&
+          document.activeElement.closest &&
+          document.activeElement.closest('.bookbtn,#bookbtn2')) ||
+        $('#bookbtn'),
+      br = src.getBoundingClientRect(),
+      tr = tome.getBoundingClientRect(),
+      vc = tr.left + tr.width * 0.75,
+      vy = tr.top + tr.height / 2,
+      dx = br.left + br.width / 2 - vc,
+      dy = br.top + br.height / 2 - vy;
+    bookov.animate([{ background: 'rgba(8,5,20,0)' }, { background: 'rgba(8,5,20,.75)' }], {
+      duration: 350,
+    });
+    openAnim = tome.animate(
+      [
+        {
+          transform: `translate(${dx}px,${dy}px) translateX(-25%) scale(.07) rotate(-8deg)`,
+          opacity: 0.3,
+        },
+        { transform: 'translateX(-25%) scale(1.05) rotate(1deg)', opacity: 1, offset: 0.75 },
+        { transform: 'translateX(-25%) scale(1)', opacity: 1 },
+      ],
+      { duration: 520, easing: 'cubic-bezier(.2,.7,.3,1)' }
+    );
+    sfx('whoosh');
+    openAnim.onfinish = () => {
+      openAnim = null;
+      if (!bookOpen) return;
+      void tome.offsetWidth;
+      tome.classList.add('anim');
+      tome.classList.remove('closed');
+      sfx('page');
+      setTimeout(() => {
+        if (!tome.classList.contains('closed')) cover.hidden = true;
+        tome.classList.remove('anim');
+      }, 850);
+    };
+  } else {
+    cover.hidden = true;
+    tome.classList.remove('closed');
+    sfx('click');
+  }
   setTimeout(() => $('#closeb').focus(), 30);
 }
 function closeBook() {
   if (!bookOpen) return;
   bookOpen = false;
-  bookov.hidden = true;
+  if (openAnim) {
+    openAnim.cancel();
+    openAnim = null;
+  }
+  const tome = $('#tome'),
+    done = () => {
+      bookov.hidden = true;
+      tome.classList.remove('closed', 'anim');
+      $('#cover').hidden = true;
+    };
+  if (!reduceMo.matches && tome.animate) {
+    tome.animate(
+      [
+        { transform: 'none', opacity: 1 },
+        { transform: 'scale(.85) translateY(30px)', opacity: 0 },
+      ],
+      { duration: 200, easing: 'ease-in' }
+    ).onfinish = done;
+  } else done();
   G.paused = false;
   last = performance.now();
   sfx('click');
@@ -556,6 +690,52 @@ qb.addEventListener('click', () => {
   qLabel();
 });
 qLabel();
+document.querySelectorAll('#budget .segb').forEach(b =>
+  b.addEventListener('click', () => {
+    G.budget = +b.dataset.b;
+    store.set('sw_budget', G.budget);
+    sfx('click');
+    updUI();
+    renderMana();
+  })
+);
+const fsb = $('#fs');
+fsb.addEventListener('click', () => {
+  try {
+    if (document.fullscreenElement) document.exitFullscreen();
+    else {
+      const r =
+        document.documentElement.requestFullscreen && document.documentElement.requestFullscreen();
+      if (r && r.catch)
+        r.catch(() => {
+          fsb.textContent = 'Plein écran : touche F11';
+        });
+    }
+  } catch (e) {
+    fsb.textContent = 'Plein écran : touche F11';
+  }
+});
+document.addEventListener('fullscreenchange', () => {
+  fsb.textContent = document.fullscreenElement ? 'Quitter le plein écran' : 'Plein écran';
+  fitStage();
+});
+function fitStage() {
+  const st = $('.stage');
+  if (innerWidth < 700) {
+    st.style.width = '';
+    return;
+  }
+  const hd = document.querySelector('header'),
+    bar = $('.bar'),
+    help = $('#help');
+  const avail = innerHeight - hd.offsetHeight - bar.offsetHeight - help.offsetHeight - 54;
+  st.style.width = Math.max(480, Math.min(innerWidth - 24, (avail * 16) / 9)) + 'px';
+}
+function fitTwice() {
+  fitStage();
+  requestAnimationFrame(fitStage);
+}
+addEventListener('resize', fitTwice);
 $('#mArena').addEventListener('click', () => {
   if (G.mode !== 'arena') setMode('arena');
 });

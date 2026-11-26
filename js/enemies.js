@@ -16,7 +16,7 @@ const EK = {
     col: '#7b5bb8',
   },
   golem: { n: 'Golem', hp: 420, spd: 24, w: 110, h: 160, rad: 62, pow: 45, col: '#8a8f9c' },
-  mage: { n: 'Sorcier', hp: 150, spd: 0, w: 60, h: 170, rad: 46, pow: 0, col: '#c39bff' },
+  mage: { n: 'Sorcier', hp: 400, spd: 0, w: 60, h: 170, rad: 46, pow: 0, col: '#c39bff' },
 };
 function spawnEnemy(kind) {
   const D = EK[kind],
@@ -247,6 +247,27 @@ function upMage(e, dt) {
       dmgEnemy(e, 20, e.x);
       txt(e.x, e.y - e.h - 20, 'PLOF', '#fff', 26);
     }
+  } else {
+    if (e.jvy || e.jy < 0) {
+      e.jvy += 1900 * dt;
+      e.jy += e.jvy * dt;
+      if (e.jy >= 0) {
+        e.jy = 0;
+        e.jvy = 0;
+        for (let i = 0; i < 4; i++)
+          part(
+            'smoke',
+            e.x + rnd(-20, 20),
+            GROUND - 4,
+            rnd(-60, 60),
+            -20,
+            0.5,
+            10,
+            'rgba(200,190,170,.5)'
+          );
+      }
+    }
+    e.y = GROUND + (e.jy || 0);
   }
   if (e.freeze > 0) e.freeze -= dt;
   if (e.stun > 0) {
