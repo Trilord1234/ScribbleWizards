@@ -189,6 +189,34 @@ function sfx(type, arg = 1) {
       case 'click':
         tone(1200, 900, 0.04, 'sine', 0.04);
         break;
+      case 'note': {
+        const f = [523, 587, 659, 784, 880][(Math.random() * 5) | 0];
+        tone(f, f, 0.25, 'triangle', 0.07);
+        tone(f * 2, f * 2, 0.2, 'sine', 0.02, 0.02);
+        break;
+      }
+      case 'portal':
+        tone(200, 1600, 0.35, 'sine', 0.06);
+        tone(1600, 300, 0.3, 'triangle', 0.03, 0.2);
+        break;
+      case 'shield':
+        tone(900, 1400, 0.25, 'sine', 0.05);
+        tone(1350, 2100, 0.25, 'sine', 0.03, 0.05);
+        break;
+      case 'rain':
+        noise(1.2, 3000, 0.06);
+        break;
+      case 'wind':
+        noise(1, 600, 0.15);
+        tone(150, 300, 0.8, 'sawtooth', 0.02);
+        break;
+      case 'web':
+        tone(1500, 300, 0.12, 'square', 0.03);
+        noise(0.08, 5000, 0.05);
+        break;
+      case 'potion':
+        [0, 0.07, 0.14].forEach(d => tone(600 + Math.random() * 600, 1200, 0.08, 'sine', 0.05, d));
+        break;
     }
   } catch (e) {}
 }

@@ -16,7 +16,7 @@ function compile(ls, sw, dk) {
   if (sw && body === 'orb') body = 'saw';
   let shape = 'orb';
   for (const k of ls) {
-    if (['egg', 'cushion', 'ghost', 'bite', 'star'].includes(k))
+    if (['egg', 'cushion', 'ghost', 'bite', 'star', 'note', 'bomb', 'potion'].includes(k))
       shape = dk && k === 'bite' ? 'skull' : k;
     if (dk && k === 'zigzag') shape = 'bat';
   }

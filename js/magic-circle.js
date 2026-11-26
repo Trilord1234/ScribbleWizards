@@ -325,6 +325,142 @@ function drawSym(c, k, s, col) {
       );
       C(0, 0.24, 0.06, 1);
       break;
+    case 'bomb':
+      C(0, 0.08, 0.27);
+      L([
+        [0.16, -0.14],
+        [0.27, -0.3],
+      ]);
+      L([
+        [0.3, -0.42],
+        [0.3, -0.34],
+      ]);
+      L([
+        [0.38, -0.34],
+        [0.32, -0.32],
+      ]);
+      break;
+    case 'portal':
+      c.beginPath();
+      c.ellipse(0, 0, 0.38 * s, 0.3 * s, 0, 0, TAU);
+      c.stroke();
+      c.beginPath();
+      c.arc(0, 0, 0.18 * s, 0, 4.2);
+      c.stroke();
+      c.beginPath();
+      c.arc(0.02 * s, 0, 0.07 * s, 0, TAU);
+      c.fill();
+      break;
+    case 'shield':
+      c.beginPath();
+      c.moveTo(0, -0.38 * s);
+      c.quadraticCurveTo(0.22 * s, -0.3 * s, 0.33 * s, -0.3 * s);
+      c.lineTo(0.31 * s, 0.02 * s);
+      c.quadraticCurveTo(0.26 * s, 0.28 * s, 0, 0.4 * s);
+      c.quadraticCurveTo(-0.26 * s, 0.28 * s, -0.31 * s, 0.02 * s);
+      c.lineTo(-0.33 * s, -0.3 * s);
+      c.quadraticCurveTo(-0.22 * s, -0.3 * s, 0, -0.38 * s);
+      c.closePath();
+      c.stroke();
+      L([
+        [0, -0.26],
+        [0, 0.28],
+      ]);
+      break;
+    case 'note':
+      c.beginPath();
+      c.ellipse(-0.12 * s, 0.24 * s, 0.13 * s, 0.1 * s, -0.4, 0, TAU);
+      c.fill();
+      L([
+        [0, 0.22],
+        [0, -0.36],
+      ]);
+      L([
+        [0, -0.36],
+        [0.24, -0.24],
+        [0.26, -0.06],
+      ]);
+      break;
+    case 'cloud':
+      c.beginPath();
+      c.moveTo(-0.36 * s, 0.1 * s);
+      c.arc(-0.2 * s, 0.02 * s, 0.16 * s, Math.PI * 0.8, Math.PI * 1.6);
+      c.arc(0.04 * s, -0.1 * s, 0.2 * s, Math.PI * 1.1, Math.PI * 1.9);
+      c.arc(0.24 * s, 0.02 * s, 0.15 * s, Math.PI * 1.4, Math.PI * 0.3);
+      c.closePath();
+      c.stroke();
+      L([
+        [-0.18, 0.24],
+        [-0.22, 0.36],
+      ]);
+      L([
+        [0, 0.24],
+        [-0.04, 0.36],
+      ]);
+      L([
+        [0.18, 0.24],
+        [0.14, 0.36],
+      ]);
+      break;
+    case 'tornado':
+      L([
+        [-0.38, -0.3],
+        [0.38, -0.3],
+      ]);
+      L([
+        [-0.28, -0.14],
+        [0.26, -0.14],
+      ]);
+      L([
+        [-0.16, 0.02],
+        [0.2, 0.02],
+      ]);
+      L([
+        [-0.06, 0.18],
+        [0.12, 0.18],
+      ]);
+      L([
+        [0, 0.34],
+        [0.06, 0.34],
+      ]);
+      break;
+    case 'web':
+      for (let i = 0; i < 6; i++) {
+        const a = (i / 6) * TAU;
+        L([
+          [0, 0],
+          [Math.cos(a) * 0.4, Math.sin(a) * 0.4],
+        ]);
+      }
+      for (const rr of [0.16, 0.3]) {
+        c.beginPath();
+        for (let i = 0; i <= 6; i++) {
+          const a = (i / 6) * TAU;
+          i
+            ? c.lineTo(Math.cos(a) * rr * s, Math.sin(a) * rr * s)
+            : c.moveTo(Math.cos(a) * rr * s, Math.sin(a) * rr * s);
+        }
+        c.stroke();
+      }
+      break;
+    case 'potion':
+      C(0, 0.14, 0.24);
+      L([
+        [-0.08, -0.08],
+        [-0.08, -0.3],
+      ]);
+      L([
+        [0.08, -0.08],
+        [0.08, -0.3],
+      ]);
+      L([
+        [-0.13, -0.34],
+        [0.13, -0.34],
+      ]);
+      c.beginPath();
+      c.arc(0, 0.14 * s, 0.16 * s, 0, Math.PI);
+      c.fill();
+      break;
   }
   c.restore();
 }
