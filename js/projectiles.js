@@ -43,6 +43,7 @@ function makeProj(spec, x, y, a, o = {}) {
   if (S.has('sawfish')) fish = SAWFISH;
   else if (dk) fish = PIRANHA;
   else if (c('fish') >= 3) fish = WHALE;
+  if (S.has('puffer')) fish = FISH[3];
   if (LV(spec, 'arrow') >= 2) pierce += 2;
   return {
     spec,
@@ -220,6 +221,24 @@ function fire(w, ang) {
       sfx('cast');
     });
   if (spec.n.arrow) sfx('whoosh');
+  if (spec.n.shield && (w.shieldCd || 0) <= 0) {
+    const n = spec.n.shield,
+      L = LV(spec, 'shield');
+    w.shield = L >= 2 || n >= 2 ? 5 : 3;
+    w.shieldCd = w.shield + (G.mode === 'duel' ? 4 : 2);
+    w.shieldLv = L;
+    w.shieldDark = spec.dark;
+    w.shieldBounce = spec.syn.has('bouncyshield');
+    w.shieldIce = spec.syn.has('igloo');
+    txt(
+      w.x,
+      GROUND - 220,
+      spec.dark ? "Bouclier d'épines !" : w.shieldIce ? 'Igloo !' : 'Bouclier !',
+      '#9fe3ff',
+      26
+    );
+    sfx('shield');
+  }
   w.cd = w.haste > 0 ? 0.15 : 0.3;
   w.recoil = 1;
   sfx(spec.dark ? 'dcast' : 'cast');
@@ -317,6 +336,31 @@ function trail(p, dt) {
       0.12,
       3,
       dk ? '#c27bff' : '#fff59a'
+    );
+  if (c('note') && Math.random() < 0.15)
+    part('zz', x, y, rnd(-30, 30), rnd(-60, -20), 0.9, 18, '#ff9de2', { ch: '♪' });
+  if (c('portal') && Math.random() < 0.5)
+    part('spark', x + rnd(-r, r), y + rnd(-r, r), 0, 0, 0.4, 3, '#c27bff');
+  if (c('shield') && Math.random() < 0.3)
+    part('spark', x, y, rnd(-40, 40), rnd(-40, 40), 0.4, 3, '#9fe3ff');
+  if (c('bomb') && Math.random() < 0.6)
+    part('spark', x, y - r, rnd(-40, 40), rnd(-80, -20), 0.3, 3, '#ffd36b');
+  if (c('cloud') && Math.random() < 0.3)
+    part('drop', x, y, rnd(-20, 20), rnd(80, 160), 0.6, 2, '#9fd8ff', { g: 600 });
+  if (c('tornado') && Math.random() < 0.3)
+    part('smoke', x, y, rnd(-60, 60), rnd(-60, 60), 0.5, r * 0.6, 'rgba(200,235,230,.3)');
+  if (c('web') && Math.random() < 0.3)
+    part('straw', x, y, 0, 0, 0.5, r * 1.4, 'rgba(255,255,255,.7)', { vr: rnd(-3, 3) });
+  if (c('potion') && Math.random() < 0.3)
+    part(
+      'dot',
+      x,
+      y,
+      rnd(-30, 30),
+      rnd(-60, -20),
+      0.6,
+      3,
+      ['#7cf27c', '#ff9de2', '#8fe3ff'][(Math.random() * 3) | 0]
     );
   if (c('tree') && !dk) {
     p.drop += 0.016;
@@ -429,6 +473,26 @@ function upProj(p, dt) {
     if (p.drop > 0.1) {
       p.drop = 0;
       part('sring', p.x, p.y, 0, 0, 0.4, p.r * 3, '#bfe9ff');
+    }
+  }
+  if (c('portal') && !p.ported && p.t > 0.3) {
+    p.ported = true;
+    const L = LV(k, 'portal') || 1,
+      tg = nearestFoes(p.x, p.y, L >= 3 ? 4 : L >= 2 ? 2 : 1, p.owner);
+    if (tg.length) {
+      const ks = Object.assign({}, k, { n: Object.assign({}, k.n, { portal: 0 }) });
+      G.zones.push({ t: 'pfx', x: p.x, y: p.y, r: 40, l: 0.6, ml: 0.6 });
+      tg.forEach(e => {
+        const tx = clamp(e.x + rnd(-20, 20), 40, W - 40);
+        G.zones.push({ t: 'pfx', x: tx, y: 140, r: 50, l: 0.7, ml: 0.7 });
+        const np = makeProj(ks, tx, 150, Math.PI / 2, { owner: p.owner });
+        np.r = p.r;
+        np.dmg = p.dmg;
+        G.projs.push(np);
+      });
+      p.dead = true;
+      sfx('portal');
+      return;
     }
   }
   p.bx += p.vx * dt;
@@ -638,6 +702,18 @@ function hitEnemy(e, p, x, y) {
     c = n => k.n[n] || 0,
     dk = k.dark,
     mage = e.kind === 'mage';
+  if (mage && e.wz.shield > 0) {
+    const w = e.wz;
+    txt(e.x, e.y - e.h - 30, 'BLOQUÉ !', '#9fe3ff', 28);
+    sfx('shield');
+    burst(x, y, '#9fe3ff', 14, 260);
+    const atk = p.owner && p.owner.ent;
+    if (atk && !atk.ko) {
+      if (w.shieldLv >= 3 || w.shieldDark) dmgEnemy(atk, p.dmg * 0.5, atk.x);
+      if (w.shieldIce) atk.freeze = Math.max(atk.freeze || 0, 0.8);
+    }
+    return;
+  }
   if (p.love) {
     charm(e);
     return;
@@ -716,6 +792,46 @@ function hitEnemy(e, p, x, y) {
   }
   if (c('bolt')) chain(e, c('bolt') + (dk ? 1 : 0), p.owner, dk, 14 + 6 * (c('bolt') - 1));
   const lv = n => LV(k, n);
+  if (c('note') && !e.dead && !e.ko) {
+    if (dk) {
+      if (mage) e.stun = Math.max(e.stun || 0, 1);
+      else if (e.kind !== 'golem') {
+        e.poss = 3 * c('note');
+        txt(e.x, e.y - e.h - 20, 'Chant maudit !', '#c34dff', 24);
+        sfx('evil');
+      }
+    } else {
+      dance(e, mage ? 1.2 : 2);
+      sfx('note');
+      if (S.has('serenade')) charm(e);
+      if (lv('note') === 2 || S.has('rock'))
+        for (const o of G.enemies)
+          if (o !== e && isFoe(o, p.owner) && Math.hypot(o.x - e.x, o.y - e.y) < 190) {
+            dance(o, o.kind === 'mage' ? 1 : 2);
+            if (S.has('rock')) {
+              G.bolts.push({ pts: jag(e.x, e.y - e.h / 2, o.x, o.y - o.h / 2), l: 0.3 });
+              dmgEnemy(o, 12, o.x);
+            }
+          }
+      if (lv('note') >= 3 && !p.concert) {
+        p.concert = true;
+        for (const o of G.enemies) if (isFoe(o, p.owner)) dance(o, o.kind === 'mage' ? 1.2 : 2.5);
+        txt(W / 2, H / 2 - 120, 'CONCERT !', '#ff9de2', 48);
+        sfx('fanfare');
+      }
+      if (S.has('rock')) {
+        sfx('zap');
+        dmgEnemy(e, 10, e.x);
+        txt(e.x, e.y - e.h - 44, "Rock'n'roll !", '#fff59a', 26);
+      }
+    }
+  }
+  if (lv('web') >= 3 && !e.dead && !e.ko && e.kind !== 'golem') {
+    e.cocoon = mage ? 1.5 : 4;
+    e.stun = Math.max(e.stun || 0, e.cocoon);
+    txt(e.x, e.y - e.h - 20, 'Cocon !', '#ffffff', 26);
+    sfx('web');
+  }
   if (lv('heart') === 2 && !e.dead) {
     e.stun = Math.max(e.stun || 0, 0.8);
     for (let i = 0; i < 4; i++)
@@ -825,6 +941,7 @@ function poison(x, y, own, n = 1) {
 }
 function dmgEnemy(e, d, x, silent) {
   if (e.dead || e.ko) return;
+  if (e.kind === 'mage' && e.wz.shield > 0) d *= 0.15;
   if (e.freeze > 0 && e.brittle) {
     d *= 2;
     if (!silent && Math.random() < 0.5) txt(e.x, e.y - e.h - 40, 'CRAC !', '#9dffd6', 22);
@@ -1170,6 +1287,7 @@ function end(p, x, y, why) {
         dk ? 'purple' : S.has('icefire') ? 'blue' : 'orange'
       );
   applyStackLevels(p, x, y, why);
+  extraEnd(p, x, y, why);
   if (c('snow')) burst(x, y, dk ? '#9dffd6' : '#e6fbff', 12, 200, 'snow', 5);
   if (why !== 'air' && !c('egg')) sfx('hit');
 }
@@ -1381,6 +1499,403 @@ function applyStackLevels(p, x, y, why) {
   if (lv('hourglass') >= 3 && !p.stopped) {
     p.stopped = true;
     timeStop(own);
+  }
+}
+const SHARKSPEC = {
+  n: { fish: 1 },
+  syn: new Set(),
+  layers: ['fish'],
+  body: 'fish',
+  shape: 'orb',
+  saw: 0,
+  dark: false,
+};
+const SPIDERSPEC = {
+  n: { magnet: 1 },
+  syn: new Set(),
+  layers: [],
+  body: 'orb',
+  shape: 'spider',
+  saw: 0,
+  dark: false,
+};
+function nearestFoes(x, y, n, own) {
+  return G.enemies
+    .filter(e => isFoe(e, own))
+    .sort((a, b) => Math.hypot(a.x - x, a.y - y) - Math.hypot(b.x - x, b.y - y))
+    .slice(0, n);
+}
+function dance(e, t) {
+  e.dance = Math.max(e.dance || 0, t);
+  e.stun = Math.max(e.stun || 0, t);
+  for (let i = 0; i < 3; i++)
+    part(
+      'zz',
+      e.x + rnd(-20, 20),
+      e.y - e.h - 10,
+      rnd(-40, 40),
+      rnd(-80, -30),
+      1.2,
+      20,
+      ['#ff9de2', '#fff07a', '#62f0dd'][i],
+      { ch: '♪' }
+    );
+}
+function extraEnd(p, x, y, why) {
+  const k = p.spec,
+    S = k.syn,
+    c = n => k.n[n] || 0,
+    lv = n => LV(k, n),
+    own = p.owner,
+    dk = k.dark;
+  if (c('bomb'))
+    G.zones.push({
+      t: 'bomb',
+      x: clamp(x, 20, W - 20),
+      y: Math.min(y, GROUND),
+      vy: 0,
+      l: S.has('puffer') ? 0.05 : S.has('surprise') ? 0.35 : 1.4,
+      ml: 1.4,
+      own,
+      lv: c('bomb'),
+      love: S.has('lovebomb'),
+      tick: 0,
+    });
+  if (c('cloud') && !p.frag) {
+    const L = lv('cloud') || 1;
+    G.zones.push({
+      t: 'cloud',
+      x,
+      y: 250,
+      r: L >= 3 ? 250 : L >= 2 ? 170 : 115,
+      l: L >= 2 ? 8 : 5,
+      ml: L >= 2 ? 8 : 5,
+      own,
+      snow: S.has('snowstorm'),
+      storm: S.has('thundercloud'),
+      garden: S.has('garden'),
+      st: 1,
+      gt: 0,
+    });
+    sfx('rain');
+    if (L >= 3) {
+      aoe(x, GROUND - 30, 320, 10, 650, own);
+      for (let i = 0; i < 50; i++)
+        part(
+          'drop',
+          x + rnd(-200, 200),
+          GROUND - 10,
+          rnd(-400, 400),
+          rnd(-600, -200),
+          1.4,
+          rnd(4, 8),
+          '#7fd6ff',
+          { g: 1100 }
+        );
+      txt(x, GROUND - 160, 'DÉLUGE !', '#7fd6ff', 40);
+      sfx('splash');
+    }
+  }
+  if (c('tornado') && !p.frag) {
+    const L = lv('tornado') || 1,
+      mk = dir => {
+        const f = nearestEnemy(x, y, 3000, own);
+        G.zones.push({
+          t: 'tornado',
+          x: clamp(x, 40, W - 40),
+          y: GROUND,
+          r: L >= 2 ? 85 : 60,
+          l: 5,
+          ml: 5,
+          own,
+          vx: dir || (f ? Math.sign(f.x - x) || 1 : 1) * 90,
+          fire: S.has('firenado'),
+          shark: S.has('sharknado'),
+          pt: 0,
+          sk: 0.6,
+        });
+      };
+    if (L >= 3) {
+      mk(-90);
+      mk(90);
+    } else mk(0);
+    sfx('wind');
+    txt(
+      x,
+      GROUND - 170,
+      S.has('sharknado')
+        ? 'Tornade à requins !'
+        : S.has('firenado')
+          ? 'Tornade de feu !'
+          : 'Tornade !',
+      '#bfeee6',
+      30
+    );
+  }
+  if (c('web')) {
+    const L = lv('web') || 1;
+    G.zones.push({
+      t: 'web',
+      x: clamp(x, 40, W - 40),
+      y: GROUND,
+      r: L >= 2 ? 140 : 90,
+      l: 6,
+      ml: 6,
+      own,
+      nid: S.has('spidernest'),
+      spT: 0.4,
+    });
+    sfx('web');
+  }
+  if (c('potion')) {
+    if (dk) poison(x, y, own, c('potion'));
+    else {
+      const n = lv('potion'),
+        fx = ['freeze', 'burn', 'bubble', 'sleep', 'dance'],
+        pick = n >= 3 ? fx : fx.sort(() => Math.random() - 0.5).slice(0, n >= 2 ? 2 : 1),
+        cols = {
+          freeze: '#8fe3ff',
+          burn: '#ff8a3d',
+          bubble: '#a6f6ff',
+          sleep: '#c8d8ff',
+          dance: '#ff9de2',
+        },
+        names = { freeze: 'gel', burn: 'feu', bubble: 'bulle', sleep: 'dodo', dance: 'danse' };
+      for (const e of G.enemies) {
+        if (!isFoe(e, own) || Math.hypot(e.x - x, e.y - e.h / 2 - y) > 115) continue;
+        const mg = e.kind === 'mage';
+        for (const f of pick) {
+          if (f === 'freeze') e.freeze = Math.max(e.freeze || 0, mg ? 1 : 2);
+          if (f === 'burn') addBurn(e, 1, false, false, true);
+          if (f === 'bubble' && e.kind !== 'golem') {
+            e.bubble = Math.max(e.bubble || 0, mg ? 1.5 : 2.5);
+            e.air = false;
+          }
+          if (f === 'sleep') {
+            e.stun = Math.max(e.stun || 0, mg ? 1 : 2.5);
+            e.sleep = e.stun;
+          }
+          if (f === 'dance') dance(e, mg ? 1 : 2);
+        }
+      }
+      for (let i = 0; i < 20; i++)
+        part(
+          'drop',
+          x,
+          Math.min(y, GROUND - 5),
+          rnd(-220, 220),
+          rnd(-380, -80),
+          1,
+          rnd(3, 6),
+          cols[pick[i % pick.length]],
+          { g: 1000 }
+        );
+      txt(
+        x,
+        Math.min(y, GROUND) - 50,
+        'Potion : ' + pick.map(f => names[f]).join(' + ') + ' !',
+        '#9dff9d',
+        24
+      );
+      sfx('potion');
+      if (own) {
+        if (G.mode === 'duel' && own.ent) {
+          if (!own.ent.ko) {
+            own.ent.hp = Math.min(own.ent.max, own.ent.hp + 8 * c('potion'));
+            txt(own.x, GROUND - 200, '+' + 8 * c('potion'), '#9dff9d', 24);
+          }
+        } else {
+          G.potion = (G.potion || 0) + c('potion');
+          if (G.potion >= 4) {
+            G.potion = 0;
+            if (G.hearts < G.maxHearts) {
+              G.hearts++;
+              txt(own.x, GROUND - 200, '+1 ♥', '#9dff9d', 30);
+            }
+          }
+        }
+      }
+    }
+  }
+}
+function explodeBomb(z) {
+  const big = z.lv >= 3,
+    R = z.mini ? 70 : big ? 230 : 130,
+    d = z.mini ? 15 : big ? 80 : 45,
+    y = z.y - 15;
+  if (z.love) {
+    for (const e of G.enemies)
+      if (isFoe(e, z.own) && Math.hypot(e.x - z.x, e.y - e.h / 2 - y) < R + 40) charm(e);
+    for (let i = 0; i < (z.mini ? 8 : 30); i++)
+      part('heart', z.x, y, rnd(-300, 300), rnd(-400, -50), 1.2, 12, '#ff6fae', { g: 400 });
+    txt(z.x, y - 70, 'BOUM… ♥', '#ff6fae', z.mini ? 22 : 38);
+  } else {
+    aoe(z.x, y, R, d, big ? 600 : 420, z.own);
+    for (let i = 0; i < (z.mini ? 10 : 30); i++)
+      part(
+        'fire',
+        z.x,
+        y,
+        rnd(-1, 1) * R * 2.2,
+        rnd(-1.6, 0.4) * R * 2,
+        rnd(0.4, 0.8),
+        rnd(10, big ? 34 : 22),
+        'orange',
+        { drag: 2.5 }
+      );
+    for (let i = 0; i < (z.mini ? 4 : 12); i++)
+      part(
+        'smoke',
+        z.x + rnd(-R, R) * 0.4,
+        y,
+        rnd(-80, 80),
+        rnd(-120, -20),
+        1.2,
+        rnd(16, 34),
+        'rgba(90,80,90,.5)'
+      );
+    chips(z.x, GROUND, '#5a4a3a', z.mini ? 6 : 14, true);
+    txt(
+      z.x,
+      y - 70,
+      big ? 'MÉGA KABOUM !' : z.mini ? 'boum' : 'KABOUM !',
+      '#ff8a3d',
+      z.mini ? 22 : big ? 50 : 40
+    );
+  }
+  part('sring', z.x, y, 0, 0, 0.45, R, '#ffd36b');
+  G.shake = Math.max(G.shake, z.mini ? 4 : big ? 22 : 14);
+  sfx('boom');
+  if (z.lv === 2 && !z.mini)
+    for (let i = 0; i < 5; i++)
+      G.zones.push({
+        t: 'bomb',
+        x: clamp(z.x + rnd(-220, 220), 20, W - 20),
+        y: z.y - 40,
+        vy: rnd(-600, -250),
+        l: rnd(0.6, 1),
+        ml: 1,
+        own: z.own,
+        lv: 0,
+        mini: true,
+        love: z.love,
+        tick: 0,
+      });
+}
+function upZone(z, dt) {
+  if (z.t === 'bomb') {
+    z.vy += 1500 * dt;
+    z.y = Math.min(GROUND, z.y + z.vy * dt);
+    if (z.y >= GROUND) z.vy = 0;
+    z.tick -= dt;
+    if (z.tick <= 0) {
+      z.tick = z.l < 0.5 ? 0.1 : 0.3;
+      if (!z.mini) sfx('tick');
+    }
+    if (Math.random() < 0.5)
+      part(
+        'spark',
+        z.x + 8,
+        z.y - (z.lv >= 3 ? 50 : z.mini ? 20 : 34),
+        rnd(-40, 40),
+        rnd(-90, -20),
+        0.3,
+        3,
+        '#ffd36b'
+      );
+  } else if (z.t === 'cloud') {
+    const f = nearestEnemy(z.x, GROUND - 50, 1600, z.own);
+    if (f) z.x += clamp(f.x - z.x, -70 * dt, 70 * dt);
+    for (let i = 0; i < (qLvl === 'rapide' ? 1 : 3); i++)
+      part(
+        z.snow ? 'snow' : 'drop',
+        z.x + rnd(-z.r, z.r) * 0.9,
+        z.y + 30,
+        z.snow ? rnd(-20, 20) : 0,
+        z.snow ? rnd(60, 120) : rnd(500, 700),
+        z.snow ? 2 : 0.9,
+        z.snow ? 4 : 2.5,
+        z.snow ? '#ffffff' : '#9fd8ff',
+        z.snow ? { vr: rnd(-4, 4) } : null
+      );
+    if (z.storm) {
+      z.st -= dt;
+      if (z.st <= 0) {
+        z.st = 1;
+        const cs = G.enemies.filter(e => isFoe(e, z.own) && Math.abs(e.x - z.x) < z.r);
+        if (cs.length) {
+          const e = cs[(Math.random() * cs.length) | 0];
+          G.bolts.push({ pts: jag(e.x + rnd(-20, 20), z.y + 30, e.x, e.y - e.h / 2), l: 0.3 });
+          dmgEnemy(e, 20, e.x);
+          e.stun = Math.max(e.stun || 0, 0.5);
+          G.flash = Math.max(G.flash, 0.15);
+          sfx('thunder');
+        }
+      }
+    }
+    if (z.garden) {
+      z.gt -= dt;
+      if (z.gt <= 0) {
+        z.gt = 0.5;
+        addPlant(z.x + rnd(-z.r, z.r), Math.random() < 0.15 ? 'tree' : 'flower');
+      }
+    }
+  } else if (z.t === 'tornado') {
+    const f = nearestEnemy(z.x, GROUND - 50, 2000, z.own);
+    if (f) z.vx += (Math.sign(f.x - z.x) * 90 - z.vx) * dt;
+    z.x = clamp(z.x + z.vx * dt, 30, W - 30);
+    if (Math.random() < 0.6)
+      part(
+        z.fire ? 'fire' : 'smoke',
+        z.x + rnd(-z.r, z.r) * 0.5,
+        GROUND - rnd(0, 180),
+        rnd(-80, 80),
+        rnd(-120, -40),
+        0.6,
+        rnd(8, 16),
+        z.fire ? 'orange' : 'rgba(200,230,225,.35)'
+      );
+    z.pt -= dt;
+    if (z.pt <= 0) {
+      z.pt = 0.5;
+      for (const q of G.props)
+        if (!q.dead && q.kind !== 'tramp' && Math.abs(q.x + q.w / 2 - z.x) < z.r + q.w / 2)
+          hitProp(q, 12, null, q.x + q.w / 2, q.y + q.h / 2);
+    }
+    if (z.shark) {
+      z.sk -= dt;
+      if (z.sk <= 0) {
+        z.sk = 0.6;
+        const f2 = nearestEnemy(z.x, GROUND - 150, 1600, z.own),
+          a = f2 ? Math.atan2(f2.y - f2.h / 2 - (GROUND - 170), f2.x - z.x) : -Math.PI / 2,
+          sp = makeProj(SHARKSPEC, z.x, GROUND - 170, a, {
+            owner: z.own,
+            speed: 520,
+            g: 200,
+            life: 3,
+          });
+        sp.fish = FISH[2];
+        G.projs.push(sp);
+        sfx('splash');
+      }
+    }
+  } else if (z.t === 'web' && z.nid) {
+    z.spT -= dt;
+    if (z.spT <= 0) {
+      z.spT = 1.4;
+      for (let i = 0; i < 2; i++)
+        G.projs.push(
+          makeProj(SPIDERSPEC, z.x + rnd(-40, 40), GROUND - 20, -Math.PI / 2 + rnd(-0.8, 0.8), {
+            speed: 380,
+            g: 900,
+            r: 8,
+            bounces: 3,
+            life: 4,
+            owner: z.own,
+            frag: true,
+          })
+        );
+    }
   }
 }
 function addChest(x) {

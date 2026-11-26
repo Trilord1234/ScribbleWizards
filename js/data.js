@@ -103,6 +103,62 @@ const SYMS = [
     d: 'Crée une zone où le temps ralentit.',
     bonus: 1,
   },
+  {
+    k: 'bomb',
+    n: 'Bombe',
+    c: '#ff6a4a',
+    d: 'Pose une bombe qui explose après un petit tic-tac.',
+    bonus: 1,
+  },
+  {
+    k: 'portal',
+    n: 'Portail',
+    c: '#c27bff',
+    d: 'La balle entre dans un portail et ressort au-dessus du monstre le plus proche.',
+    bonus: 1,
+  },
+  {
+    k: 'shield',
+    n: 'Bouclier',
+    c: '#62c8ff',
+    d: 'Ton sorcier a un bouclier magique pendant quelques secondes.',
+    bonus: 1,
+  },
+  {
+    k: 'note',
+    n: 'Note de musique',
+    c: '#ff9de2',
+    d: 'Fait danser les monstres : ils ne peuvent plus avancer.',
+    bonus: 1,
+  },
+  {
+    k: 'cloud',
+    n: 'Nuage',
+    c: '#cfe3ff',
+    d: 'Un nuage de pluie suit les monstres et les ralentit.',
+    bonus: 1,
+  },
+  {
+    k: 'tornado',
+    n: 'Tornade',
+    c: '#a8e0d8',
+    d: 'Une tornade qui soulève les monstres et les envoie valser.',
+    bonus: 1,
+  },
+  {
+    k: 'web',
+    n: "Toile d'araignée",
+    c: '#ececf4',
+    d: 'Une toile au sol : les monstres restent collés dedans.',
+    bonus: 1,
+  },
+  {
+    k: 'potion',
+    n: 'Potion',
+    c: '#7cf27c',
+    d: 'Potion surprise : un effet au hasard (gel, feu, bulle, dodo ou danse), et elle soigne ton sorcier.',
+    bonus: 1,
+  },
 ];
 const SM = {};
 SYMS.forEach(s => (SM[s.k] = s));
@@ -148,6 +204,9 @@ const DSTK = {
   bubble: 'nuage de poison plus grand',
   hourglass: 'tire vite plus longtemps',
   egg: "plus d'araignées",
+  shield: 'bouclier plus long',
+  note: 'chant maudit plus long',
+  potion: 'poison plus fort',
 };
 const STACK_LEVELS = {
   heart: [
@@ -246,6 +305,38 @@ const STACK_LEVELS = {
     ['Temps très lent', 'zone plus grande et plus lente'],
     ['Arrêt du temps', "tout s'arrête pendant quelques secondes !"],
   ],
+  bomb: [
+    ['Bombe à fragmentation', 'en explosant, elle lance des mini-bombes'],
+    ['Méga-bombe', 'une énorme explosion'],
+  ],
+  portal: [
+    ['Double portail', 'ressort au-dessus de 2 cibles'],
+    ['Pluie de portails', 'ressort au-dessus de 4 cibles'],
+  ],
+  shield: [
+    ['Grand bouclier', 'le bouclier dure plus longtemps'],
+    ['Bouclier miroir', 'renvoie les coups et pique les monstres'],
+  ],
+  note: [
+    ['Chorale', 'les monstres autour dansent aussi'],
+    ['Concert', 'tous les monstres dansent !'],
+  ],
+  cloud: [
+    ['Gros nuage', 'nuage plus grand qui dure plus longtemps'],
+    ['Déluge', 'une grosse vague emporte les monstres'],
+  ],
+  tornado: [
+    ['Grosse tornade', 'tornade plus large'],
+    ['Double tornade', 'deux tornades partent de chaque côté'],
+  ],
+  web: [
+    ['Grande toile', 'toile beaucoup plus large'],
+    ['Cocon', 'le monstre touché est emballé dans un cocon'],
+  ],
+  potion: [
+    ['Double potion', 'deux effets surprise'],
+    ['Potion arc-en-ciel', "tous les effets d'un coup"],
+  ],
 };
 const LV = (spec, n) => (spec.dark && DARK[n] ? 0 : spec.n[n] || 0);
 const stkDesc = (k, dk) =>
@@ -316,6 +407,17 @@ const DARK = {
     c: '#ff6b6b',
     d: 'Ton sorcier tire deux fois plus vite pendant 5 secondes.',
   },
+  shield: {
+    n: "Bouclier d'épines",
+    c: '#b46bff',
+    d: "Un bouclier violet plein d'épines : ceux qui le touchent se piquent.",
+  },
+  note: {
+    n: 'Chant maudit',
+    c: '#c34dff',
+    d: "Les monstres qui l'entendent se battent entre eux.",
+  },
+  potion: { n: 'Potion de poison', c: '#8dff6a', d: 'La potion se renverse en flaque de poison.' },
 };
 function mix(a, b, t) {
   const A = parseInt(a.slice(1), 16),
@@ -454,6 +556,97 @@ const SYN = [
     any: 1,
     n: 'Poisson-scie',
     d: 'Dents de scie dehors + un poisson dedans = un vrai poisson-scie !',
+  },
+  {
+    id: 'thundercloud',
+    a: 'cloud',
+    b: 'bolt',
+    n: "Nuage d'orage",
+    d: 'Le nuage lance des éclairs sur les monstres en dessous.',
+  },
+  {
+    id: 'snowstorm',
+    a: 'cloud',
+    b: 'snow',
+    n: 'Tempête de neige',
+    d: 'Le nuage fait tomber de la neige qui gèle.',
+  },
+  {
+    id: 'garden',
+    a: 'cloud',
+    b: 'tree',
+    n: 'Jardin enchanté',
+    d: 'La pluie fait pousser des fleurs et des arbres partout.',
+  },
+  {
+    id: 'firenado',
+    a: 'tornado',
+    b: 'flame',
+    n: 'Tornade de feu',
+    d: 'Une tornade en flammes qui brûle tout.',
+  },
+  {
+    id: 'sharknado',
+    a: 'tornado',
+    b: 'fish',
+    n: 'Tornade à requins',
+    d: 'La tornade crache des requins sur les monstres !',
+  },
+  {
+    id: 'lovebomb',
+    a: 'bomb',
+    b: 'heart',
+    n: 'Bombe à câlins',
+    d: "L'explosion rend tous les monstres gentils.",
+  },
+  {
+    id: 'puffer',
+    a: 'fish',
+    b: 'bomb',
+    n: 'Poisson-globe explosif',
+    d: 'Le poisson-globe gonfle… et explose !',
+  },
+  {
+    id: 'surprise',
+    a: 'portal',
+    b: 'bomb',
+    n: 'Bombe surprise',
+    d: "La bombe tombe d'un portail et explose presque tout de suite.",
+  },
+  {
+    id: 'serenade',
+    a: 'note',
+    b: 'heart',
+    n: 'Sérénade',
+    d: 'La musique rend les monstres amoureux : ils rentrent chez eux.',
+  },
+  {
+    id: 'rock',
+    a: 'note',
+    b: 'bolt',
+    n: "Rock'n'roll",
+    d: 'Les monstres dansent et prennent des décharges électriques.',
+  },
+  {
+    id: 'spidernest',
+    a: 'web',
+    b: 'egg',
+    n: "Nid d'araignées",
+    d: 'Des petites araignées sortent de la toile et attaquent.',
+  },
+  {
+    id: 'bouncyshield',
+    a: 'shield',
+    b: 'cushion',
+    n: 'Bouclier rebondissant',
+    d: 'Le bouclier renvoie les monstres très loin.',
+  },
+  {
+    id: 'igloo',
+    a: 'shield',
+    b: 'snow',
+    n: 'Igloo',
+    d: "Un bouclier de glace qui gèle ceux qui l'attaquent.",
   },
 ];
 const SYNM = {};
