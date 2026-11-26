@@ -1,9 +1,40 @@
 /* Scribble Wizards — state.js
    Wizards, global game state and quality settings. */
-/* ---------- game state ---------- */
+/* ---------- wizards & game state ---------- */
+function mkWiz(i) {
+  const d = store.get('sw_w' + i, null) || {};
+  return {
+    i,
+    x: i ? W - 150 : 150,
+    side: i ? -1 : 1,
+    robe: d.robe || (i ? '#e0457b' : '#6b4cff'),
+    name: d.name || (i ? 'Morgane' : 'Merlin'),
+    layers: cleanL(d.layers || (i ? ['fish', 'bite', 'arrow'] : ['flame'])),
+    saw: !!d.saw,
+    dark: !!d.dark,
+    hurt: 0,
+    recoil: 0,
+    cd: 0,
+    haste: 0,
+    aim: i ? Math.PI + 0.2 : -0.2,
+    ent: null,
+  };
+}
+const WZ = [mkWiz(0), mkWiz(1)];
+let ed = 0;
+const CW = () => WZ[ed];
+const saveW = w =>
+  store.set('sw_w' + w.i, {
+    robe: w.robe,
+    name: w.name,
+    layers: w.layers,
+    saw: w.saw,
+    dark: w.dark,
+  });
 const cvs = $('#game'),
   ctx = cvs.getContext('2d');
 const G = {
+  mode: 'arena',
   projs: [],
   parts: [],
   props: [],
@@ -22,18 +53,13 @@ const G = {
   spawnT: 0,
   score: 0,
   broken: 0,
-  cd: 0,
-  cast: null,
+  cast: [],
   aim: { x: 900, y: 560 },
   firing: false,
   banner: null,
   over: false,
   time: 0,
-};
-const WIZ = {
-  x: 150,
-  robe: store.get('sw_robe', '#6b4cff'),
-  name: store.get('sw_name', 'Merlin'),
-  hurt: 0,
-  recoil: 0,
+  steal: 0,
+  blood: 0,
+  duel: { state: 'idle', t: 0 },
 };

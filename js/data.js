@@ -38,7 +38,7 @@ const SYMS = [
     d: 'Grosse gravité : la balle tombe lourdement et fait BOUM au sol.',
   },
   { k: 'flame', n: 'Flamme', c: '#ff8a3d', d: "Effets de feu : enflamme ce qu'elle touche." },
-  { k: 'snow', n: 'Flocon', c: '#8fe3ff', d: 'Effets de gel : gèle les monstres sur place.' },
+  { k: 'snow', n: 'Flocon', c: '#8fe3ff', d: 'Effets de gel : gèle sur place.' },
   {
     k: 'bite',
     n: 'Lune à dents',
@@ -81,31 +81,97 @@ const SYMS = [
     d: 'Fait sortir un petit mur de béton du sol, là où la balle tombe.',
   },
   { k: 'star', n: 'Étoile', c: '#fff07a', d: "Explose en feu d'artifice.", bonus: 1 },
-  { k: 'bolt', n: 'Éclair', c: '#fff59a', d: "L'éclair saute d'un monstre à l'autre.", bonus: 1 },
+  { k: 'bolt', n: 'Éclair', c: '#fff59a', d: "L'éclair saute d'une cible à l'autre.", bonus: 1 },
   {
     k: 'magnet',
     n: 'Aimant',
     c: '#ff6464',
-    d: 'Tête chercheuse : la balle poursuit le monstre le plus proche.',
+    d: 'Tête chercheuse : la balle poursuit la cible la plus proche.',
     bonus: 1,
   },
   {
     k: 'bubble',
     n: 'Bulle',
     c: '#a6f6ff',
-    d: "Enferme le monstre dans une bulle qui s'envole.",
+    d: "Enferme la cible dans une bulle qui s'envole.",
     bonus: 1,
   },
   {
     k: 'hourglass',
     n: 'Sablier',
     c: '#e8c07a',
-    d: 'Crée une zone où le temps ralentit pour les monstres.',
+    d: 'Crée une zone où le temps ralentit.',
     bonus: 1,
   },
 ];
 const SM = {};
 SYMS.forEach(s => (SM[s.k] = s));
+const DARK = {
+  heart: {
+    n: 'Cœur noir',
+    c: '#d1337a',
+    d: 'Deux balles noires qui volent la vie : ton sorcier se soigne.',
+  },
+  flame: {
+    n: 'Feu maudit',
+    c: '#c34dff',
+    d: "Flammes violettes qui brûlent deux fois plus longtemps et sautent d'un monstre à l'autre.",
+  },
+  snow: {
+    n: 'Givre maudit',
+    c: '#5fe3b0',
+    d: 'Gèle et rend fragile : la cible gelée prend double dégâts.',
+  },
+  bite: { n: 'Crâne mordeur', c: '#e8e2d0', d: 'Un crâne qui mord et vole la vie.' },
+  ghost: {
+    n: 'Possession',
+    c: '#9dff9d',
+    d: 'Le monstre touché est possédé et se retourne contre les autres. En duel : le sorcier est paralysé.',
+  },
+  zigzag: {
+    n: 'Nuée de chauves-souris',
+    c: '#b07cff',
+    d: "Trois chauves-souris qui volent n'importe comment.",
+  },
+  gravity: { n: 'Vortex', c: '#7a3cff', d: 'Ouvre un petit trou noir là où la balle tombe.' },
+  fish: { n: 'Piranha', c: '#ff5a5a', d: 'Un piranha qui traverse et mord tout sur son passage.' },
+  egg: {
+    n: "Œuf d'araignée",
+    c: '#d9d2ff',
+    d: 'Se casse en petites araignées qui poursuivent les cibles.',
+  },
+  tree: {
+    n: 'Ronces',
+    c: '#7fbf3a',
+    d: 'Des ronces piquantes poussent : elles ralentissent et piquent.',
+  },
+  coin: {
+    n: 'Pièce maudite',
+    c: '#b8ff3c',
+    d: "Une pièce piégée qui explose quand on la ramasse (ou toute seule au bout d'un moment).",
+  },
+  wall: {
+    n: 'Pierre tombale',
+    c: '#a9a3b8',
+    d: 'Une tombe sort du sol, et une main de zombie attrape les monstres qui la touchent.',
+  },
+  star: { n: 'Étoile noire', c: '#c39bff', d: "Aspire tout autour d'elle, puis explose." },
+  bubble: { n: 'Bulle de poison', c: '#8dff6a', d: 'Éclate en nuage de poison vert.' },
+  hourglass: {
+    n: 'Sablier inversé',
+    c: '#ff6b6b',
+    d: 'Ton sorcier tire deux fois plus vite pendant 5 secondes.',
+  },
+};
+function mix(a, b, t) {
+  const A = parseInt(a.slice(1), 16),
+    B = parseInt(b.slice(1), 16),
+    f = s => Math.round(((A >> s) & 255) * (1 - t) + ((B >> s) & 255) * t);
+  return '#' + [16, 8, 0].map(s => f(s).toString(16).padStart(2, '0')).join('');
+}
+const symCol = (k, dk) => (dk ? (DARK[k] && DARK[k].c) || mix(SM[k].c, '#7a2cff', 0.45) : SM[k].c);
+const symName = (k, dk) => (dk && DARK[k] ? DARK[k].n : SM[k].n);
+const symDesc = (k, dk) => (dk && DARK[k] ? DARK[k].d : SM[k].d);
 
 const SYN = [
   {
@@ -120,7 +186,7 @@ const SYN = [
     a: 'snow',
     b: 'flame',
     n: 'Explosion de vapeur',
-    d: 'Un gros nuage de vapeur qui étourdit tous les monstres autour.',
+    d: 'Un gros nuage de vapeur qui étourdit tout autour.',
   },
   {
     id: 'caviar',
@@ -197,14 +263,14 @@ const SYN = [
     a: 'gravity',
     b: 'egg',
     n: 'Trou noir',
-    d: "L'œuf libère un mini trou noir qui aspire les monstres.",
+    d: "L'œuf libère un mini trou noir qui aspire tout.",
   },
   {
     id: 'love',
     a: 'dots',
     b: 'heart',
     n: "Pluie d'amour",
-    d: 'Des cœurs qui rendent les monstres gentils : ils rentrent chez eux.',
+    d: 'Des cœurs qui rendent les monstres gentils (et les sorciers amoureux).',
   },
   {
     id: 'pyramid',
@@ -225,7 +291,7 @@ const SYN = [
     a: 'star',
     b: 'heart',
     n: "Feu d'artifice d'amour",
-    d: "Le feu d'artifice rend gentils tous les monstres autour.",
+    d: "Le feu d'artifice rend gentil tout ce qui est autour.",
   },
   {
     id: 'sawfish',
@@ -255,15 +321,13 @@ const store = {
   },
 };
 const PRESETS = [
-  { n: 'Boule de feu', l: ['mountain', 'flame'], s: false },
-  { n: 'Poisson-scie glouton', l: ['fish', 'bite', 'arrow'], s: true },
-  { n: 'Fusil à flocons', l: ['dots', 'snow', 'arrow'], s: false },
-  { n: 'Parpaing rebondissant', l: ['square', 'cushion', 'cushion'], s: false },
+  { n: 'Boule de feu', l: ['mountain', 'flame'], s: false, d: false },
+  { n: 'Poisson-scie glouton', l: ['fish', 'bite', 'arrow'], s: true, d: false },
+  { n: 'Fusil à flocons', l: ['dots', 'snow', 'arrow'], s: false, d: false },
+  { n: 'Parpaing rebondissant', l: ['square', 'cushion', 'cushion'], s: false, d: false },
+  { n: 'Malédiction des ronces', l: ['tree', 'flame', 'arrow'], s: false, d: true },
 ];
-let layers = (store.get('sw_layers', ['flame']) || [])
-  .filter(k => SM[k] && k !== 'saw')
-  .slice(0, MAXL);
-let saw = !!store.get('sw_saw', false);
+const cleanL = l => (Array.isArray(l) ? l : []).filter(k => SM[k] && k !== 'saw').slice(0, MAXL);
 let discovered = new Set(store.get('sw_disc', []).filter(id => SYNM[id]));
-let grimoire = store.get('sw_grim', PRESETS);
+let grimoire = store.get('sw_grim2', PRESETS);
 if (!Array.isArray(grimoire)) grimoire = PRESETS.slice();
