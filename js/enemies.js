@@ -168,12 +168,39 @@ function zoneFx(e, dt, isMage) {
       e.x += ((z.x - e.x) / (d + 1)) * 420 * dt;
       if (EK[e.kind].fly) e.y += (z.y - e.y) * 2 * dt;
     }
+    if (z.t === 'web' && Math.abs(e.x - z.x) < z.r && e.y > GROUND - 40) {
+      sf *= 0.06;
+      if (!e.webTxt) {
+        e.webTxt = 1;
+        txt(e.x, e.y - e.h - 20, 'Collé !', '#ffffff', 22);
+      }
+    }
+    if (z.t === 'cloud' && Math.abs(e.x - z.x) < z.r) {
+      sf *= z.snow ? 0.45 : 0.7;
+      dmgEnemy(e, (z.snow ? 5 : 3) * dt, null, true);
+      if (z.snow && Math.random() < dt * 0.4) e.freeze = Math.max(e.freeze || 0, 1);
+    }
+    if (z.t === 'tornado' && Math.abs(e.x - z.x) < z.r && e.y > GROUND - 260) {
+      if (isMage) {
+        dmgEnemy(e, 6 * dt, null, true);
+        if (z.fire && !(e.burn > 0)) addBurn(e, 1, false, false, true);
+      } else if (!(e.tornT > 0) && e.kind !== 'golem') {
+        e.tornT = 1;
+        e.vy = -650;
+        e.vx = rnd(-260, 260);
+        if (!EK[e.kind].fly) e.air = true;
+        dmgEnemy(e, 10, e.x);
+        if (z.fire) addBurn(e, 1, false, false, true);
+      }
+    }
   }
   return sf;
 }
 function upMage(e, dt) {
   const w = e.wz;
   e.t += dt;
+  e.dance = Math.max(0, (e.dance || 0) - dt);
+  e.cocoon = Math.max(0, (e.cocoon || 0) - dt);
   e.flash = Math.max(0, e.flash - dt);
   if (e.ko) {
     e.koT += dt;
@@ -238,6 +265,9 @@ function upEnemy(e, dt) {
   e.flash = Math.max(0, e.flash - dt);
   e.swing = Math.max(0, e.swing - dt * 3);
   e.grabCd = Math.max(0, e.grabCd - dt);
+  e.tornT = Math.max(0, (e.tornT || 0) - dt);
+  e.dance = Math.max(0, (e.dance || 0) - dt);
+  e.cocoon = Math.max(0, (e.cocoon || 0) - dt);
   if (e.burn > 0) {
     e.burn -= dt;
     if (e.burn <= 0) e.burnS = 0;
@@ -492,8 +522,23 @@ function upEnemy(e, dt) {
       break;
     }
   if (e.x - e.w / 2 < WZ[0].x + 30) {
-    e.dead = true;
-    burst(e.x, e.y - e.h / 2, D.col, 16, 260);
-    hurtWizard();
+    const w = WZ[0];
+    if (w.shield > 0) {
+      e.x = w.x + 70 + e.w / 2;
+      if (e.kind !== 'golem') {
+        if (!D.fly) e.air = true;
+        e.vy = -(w.shieldBounce ? 900 : 450);
+        e.vx = w.shieldBounce ? 950 : 380;
+      }
+      if (Math.random() < 0.5)
+        txt(e.x, e.y - e.h - 20, w.shieldBounce ? 'BOING !' : 'BLOQUÉ !', '#9fe3ff', 24);
+      sfx(w.shieldBounce ? 'boing' : 'shield');
+      if (w.shieldLv >= 3 || w.shieldDark) dmgEnemy(e, 30, e.x);
+      if (w.shieldIce) e.freeze = Math.max(e.freeze || 0, 2);
+    } else {
+      e.dead = true;
+      burst(e.x, e.y - e.h / 2, D.col, 16, 260);
+      hurtWizard();
+    }
   }
 }

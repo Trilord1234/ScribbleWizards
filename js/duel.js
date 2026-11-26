@@ -108,6 +108,8 @@ function upDuel(dt) {
     w.hurt = Math.max(0, w.hurt - dt);
     w.recoil = Math.max(0, w.recoil - dt * 5);
     w.haste = Math.max(0, w.haste - dt);
+    w.shield = Math.max(0, (w.shield || 0) - dt);
+    w.shieldCd = (w.shieldCd || 0) - dt;
   }
   if (D.state !== 'fight') return;
   for (const w of WZ) {
