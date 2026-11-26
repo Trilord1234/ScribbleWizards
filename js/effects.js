@@ -2,7 +2,7 @@
    Particles, floating texts and banners. */
 /* ---------- particles & text ---------- */
 function part(t, x, y, vx, vy, l, s, c, o) {
-  if (G.parts.length > 1900) return;
+  if (G.parts.length > Q().parts) return;
   const p = { t, x, y, vx, vy, l, ml: l, s, c, g: 0, rot: Math.random() * TAU, vr: 0, drag: 0 };
   if (o) Object.assign(p, o);
   G.parts.push(p);
@@ -29,6 +29,7 @@ function chips(x, y, col, n, big) {
   }
 }
 function txt(x, y, s, c, size = 30) {
+  if (G.texts.length > Q().txt) G.texts.shift();
   G.texts.push({ x, y, s, c, l: 1.1, size });
 }
 function banner(t, sub) {

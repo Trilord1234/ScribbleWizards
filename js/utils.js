@@ -45,3 +45,15 @@ const easeBack = x => {
     c3 = c1 + 1;
   return 1 + c3 * Math.pow(x - 1, 3) + c1 * Math.pow(x - 1, 2);
 };
+function shade(h, f) {
+  const n = parseInt(h.slice(1), 16);
+  let r = (n >> 16) & 255,
+    g = (n >> 8) & 255,
+    b = n & 255;
+  const t = f < 0 ? 0 : 255,
+    p = Math.abs(f);
+  r = Math.round((t - r) * p + r);
+  g = Math.round((t - g) * p + g);
+  b = Math.round((t - b) * p + b);
+  return `rgb(${r},${g},${b})`;
+}

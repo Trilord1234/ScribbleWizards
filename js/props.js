@@ -19,16 +19,18 @@ function newProp(kind, x, w, h, hp, o = {}) {
       frost: 0,
       rise: 0,
       stage: 0,
+      handT: 0,
       spawned: true,
     },
     o
   );
 }
-function spawnWall(x, S) {
-  x = clamp(x, 280, W - 90);
+function spawnWall(x, S, dk) {
+  x = G.mode === 'duel' ? clamp(x, 300, W - 300) : clamp(x, 280, W - 90);
   let q;
   if (S.has('tramp')) q = newProp('tramp', x - 50, 100, 24, 999);
   else if (S.has('rampart')) q = newProp('rampart', x - 40, 80, 210, 320);
+  else if (dk) q = newProp('tomb', x - 28, 56, 96, 200);
   else q = newProp('concrete', x - 25, 50, 120, 140);
   G.props.push(q);
   for (let i = 0; i < 16; i++)
@@ -40,20 +42,34 @@ function spawnWall(x, S) {
       rnd(-120, -20),
       1,
       rnd(12, 22),
-      'rgba(200,190,170,.5)',
+      dk ? 'rgba(120,90,150,.5)' : 'rgba(200,190,170,.5)',
       { drag: 2 }
     );
   chips(x, GROUND, '#6b5a3a', 10);
   G.shake = Math.max(G.shake, 6);
-  sfx('wall');
+  sfx(dk ? 'evil' : 'wall');
   const sp = G.props.filter(p => p.spawned && !p.dead);
   if (sp.length > 9) {
     sp[0].dead = true;
     chips(sp[0].x + sp[0].w / 2, sp[0].y + sp[0].h / 2, PROPCOL[sp[0].kind], 16, true);
   }
 }
+function spawnBigTree(x) {
+  x = G.mode === 'duel' ? clamp(x, 320, W - 320) : clamp(x, 300, W - 100);
+  G.props.push(newProp('bigtree', x - 40, 80, 250, 280));
+  for (let i = 0; i < 20; i++)
+    part('leaf', x, GROUND - 120, rnd(-250, 250), rnd(-400, -100), 1.6, 8, '#4fbf5a', {
+      g: 300,
+      vr: rnd(-6, 6),
+    });
+  chips(x, GROUND, '#5a3f22', 14, true);
+  G.shake = Math.max(G.shake, 10);
+  txt(x, GROUND - 300, 'Arbre géant !', '#9de88a', 36);
+  sfx('grow');
+  sfx('rumble');
+}
 function spawnPyramid(x) {
-  x = clamp(x, 300, W - 120);
+  x = G.mode === 'duel' ? clamp(x, 320, W - 320) : clamp(x, 300, W - 120);
   G.props.push(newProp('pyramid', x - 80, 160, 110, 260));
   for (let i = 0; i < 20; i++)
     part(
@@ -78,8 +94,12 @@ function hitProp(q, d, p, x, y) {
   chips(x, y, PROPCOL[q.kind], 4 + Math.min(10, (d / 5) | 0));
   if (p) {
     const k = p.spec;
-    if (k.n.flame && WOOD.has(q.kind)) q.burn = 3;
-    if (k.n.snow) q.frost = 3;
+    if (k.n.flame && WOOD.has(q.kind)) {
+      q.burnS = Math.min(10, (q.burn > 0 ? q.burnS || 1 : 0) + k.n.flame);
+      q.burn = 3;
+      q.curse = k.dark;
+    }
+    if (k.n.snow) q.frost = Math.min(8, (q.frost || 0) + 2 + k.n.snow);
   }
   const st = Math.min(3, Math.floor((1 - Math.max(0, q.hp) / q.max) * 3.999));
   if (st > q.stage) {
@@ -146,18 +166,49 @@ function breakProp(q) {
 }
 
 /* ---------- pickups & plants ---------- */
-function addCoin(x, y, vx, vy) {
+function addCoin(x, y, vx, vy, cursed, own) {
   if (G.pickups.length < 40)
-    G.pickups.push({ x, y, vx, vy, t: Math.random() * 5, l: 14, ground: false, dead: false });
+    G.pickups.push({
+      x,
+      y,
+      vx,
+      vy,
+      t: Math.random() * 5,
+      l: 14,
+      ground: false,
+      dead: false,
+      cursed: !!cursed,
+      own: own || null,
+      fuse: G.mode === 'duel' ? 1.5 : 5,
+    });
+}
+function explodeCoin(c) {
+  c.dead = true;
+  aoe(c.x, GROUND - 20, 110, 40, 350, c.own);
+  for (let i = 0; i < 30; i++)
+    part(
+      i % 2 ? 'spark' : 'fire',
+      c.x,
+      GROUND - 15,
+      rnd(-300, 300),
+      rnd(-350, 50),
+      rnd(0.4, 0.9),
+      rnd(5, 14),
+      i % 2 ? '#b8ff3c' : 'purple',
+      { drag: 2 }
+    );
+  G.shake = Math.max(G.shake, 10);
+  txt(c.x, GROUND - 80, 'PIÈGE !', '#b8ff3c', 34);
+  sfx('boom');
 }
 const LEAF = ['#4fbf5a', '#3aa85a', '#6fd36a', '#ffb3d1', '#f29a3a'];
-function addPlant(x, type) {
+function addPlant(x, type, big) {
   const pl = {
     x,
     type,
     g: 0,
     seed: (Math.random() * 1e9) | 0,
-    h: rnd(0.8, 1.25),
+    h: big || rnd(0.8, 1.25),
     c:
       type === 'tree'
         ? LEAF[(Math.random() * LEAF.length) | 0]
@@ -169,7 +220,9 @@ function addPlant(x, type) {
     tr = G.plants.filter(p => p.type !== 'flower');
   if (fl.length > 50) G.plants.splice(G.plants.indexOf(fl[0]), 1);
   if (tr.length > 16) G.plants.splice(G.plants.indexOf(tr[0]), 1);
+  if (big) txt(x, GROUND - 260, 'Arbre géant !', '#9de88a', 32);
   if (type !== 'flower') {
+    sfx('grow');
     for (let i = 0; i < 8; i++)
       part('leaf', x, GROUND - 20, rnd(-120, 120), rnd(-200, -60), 1.2, 6, pl.c, {
         g: 300,

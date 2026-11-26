@@ -11,15 +11,17 @@ const EK = {
     w: 50,
     h: 30,
     rad: 20,
-    pow: 0,
+    pow: 4,
     fly: 1,
     col: '#7b5bb8',
   },
   golem: { n: 'Golem', hp: 420, spd: 24, w: 110, h: 160, rad: 62, pow: 45, col: '#8a8f9c' },
+  mage: { n: 'Sorcier', hp: 400, spd: 0, w: 60, h: 170, rad: 46, pow: 0, col: '#c39bff' },
 };
 function spawnEnemy(kind) {
   const D = EK[kind],
     m = 1 + 0.12 * (G.wave - 1);
+  sfx(kind === 'golem' ? 'horn' : kind === 'bat' ? 'squeak' : 'spawn');
   G.enemies.push({
     kind,
     x: W + 40,
@@ -39,6 +41,9 @@ function spawnEnemy(kind) {
     stun: 0,
     bubble: 0,
     happy: 0,
+    poss: 0,
+    grabCd: 0,
+    spreadT: 1,
     charmed: false,
     air: false,
     atk: 0,
@@ -49,8 +54,40 @@ function spawnEnemy(kind) {
     dead: false,
   });
 }
+function mkMage(w) {
+  const D = EK.mage;
+  return {
+    kind: 'mage',
+    wz: w,
+    x: w.x,
+    y: GROUND,
+    vx: 0,
+    vy: 0,
+    hp: D.hp,
+    max: D.hp,
+    w: D.w,
+    h: D.h,
+    rad: D.rad,
+    t: 0,
+    dir: w.side,
+    flash: 0,
+    burn: 0,
+    freeze: 0,
+    stun: 0,
+    bubble: 0,
+    loveT: 0,
+    poss: 0,
+    charmed: false,
+    air: false,
+    ko: false,
+    koT: 0,
+    seed: 1,
+    dead: false,
+  };
+}
 function startWave() {
   if (G.waveActive || G.over) return;
+  sfx('horn');
   G.wave++;
   const n = G.wave,
     q = [],
@@ -65,14 +102,14 @@ function startWave() {
   G.spawnT = 1;
   G.waveActive = true;
   banner('Vague ' + n, 'Les monstres arrivent !');
-  updWaveBtn();
+  updUI();
 }
 function nearestCoin(e) {
   let best = null,
     bd = 480;
   for (const c of G.pickups) {
     if (c.dead) continue;
-    const d = Math.abs(c.x - e.x);
+    const d = Math.abs(c.x - e.x) - (c.chest ? 3000 : 0);
     if (d < bd) {
       bd = d;
       best = c;
@@ -86,25 +123,177 @@ function nearestCoin(e) {
 }
 function hurtWizard() {
   G.hearts--;
-  WIZ.hurt = 1.2;
+  WZ[0].hurt = 1.2;
   G.shake = 16;
   sfx('hurt');
-  txt(WIZ.x + 20, GROUND - 180, 'Aïe !', '#ff8a8a', 36);
+  txt(WZ[0].x + 20, GROUND - 180, 'Aïe !', '#ff8a8a', 36);
   if (G.hearts <= 0) {
     G.over = true;
     $('#overlay').hidden = false;
+    sfx('sad');
   }
 }
-
+function zoneFx(e, dt, isMage) {
+  let sf = 1;
+  for (const z of G.zones) {
+    if (isMage && z.own === e.wz) continue;
+    const d = Math.hypot(e.x - z.x, e.y - e.h / 2 - z.y);
+    if (z.t === 'slow' && d < z.r) sf *= Math.pow(0.25, 0.6 + 0.4 * (z.pow || 1));
+    if (z.t === 'hole' && d < z.r) {
+      if (!isMage && e.kind !== 'golem') {
+        e.x += ((z.x - e.x) / (d + 1)) * 260 * dt;
+        if (EK[e.kind].fly) e.cruise += (z.y - e.cruise) * dt;
+      }
+      if (d < 90) dmgEnemy(e, 14 * dt, null, true);
+    }
+    if (z.t === 'poison' && d < z.r + e.rad * 0.5) {
+      dmgEnemy(e, 10 * (z.pow || 1) * dt, null, true);
+      if (Math.random() < 0.1)
+        part('dot', e.x + rnd(-15, 15), e.y - e.h, 0, -40, 0.6, 3, '#8dff6a');
+    }
+    if (z.t === 'thorns' && Math.abs(e.x - z.x) < z.r && e.y > GROUND - 40) {
+      sf *= 0.45;
+      dmgEnemy(e, 8 * dt, null, true);
+    }
+    if (z.t === 'fire' && Math.abs(e.x - z.x) < z.r && e.y > GROUND - 40) {
+      e.fireT = (e.fireT || 0) - dt;
+      if (e.fireT <= 0) {
+        e.fireT = 0.6;
+        addBurn(e, 1, false, false, true);
+      }
+    }
+    if (z.t === 'ice' && Math.abs(e.x - z.x) < z.r && e.y > GROUND - 40) sf *= 0.35;
+    if (z.t === 'blizzard' && Math.abs(e.x - z.x) < z.r) sf *= 0.3;
+    if (z.t === 'pull' && d < z.r && !isMage && e.kind !== 'golem') {
+      e.x += ((z.x - e.x) / (d + 1)) * 420 * dt;
+      if (EK[e.kind].fly) e.y += (z.y - e.y) * 2 * dt;
+    }
+    if (z.t === 'web' && Math.abs(e.x - z.x) < z.r && e.y > GROUND - 40) {
+      sf *= 0.06;
+      if (!e.webTxt) {
+        e.webTxt = 1;
+        txt(e.x, e.y - e.h - 20, 'Collé !', '#ffffff', 22);
+      }
+    }
+    if (z.t === 'cloud' && Math.abs(e.x - z.x) < z.r) {
+      sf *= z.snow ? 0.45 : 0.7;
+      dmgEnemy(e, (z.snow ? 5 : 3) * dt, null, true);
+      if (z.snow && Math.random() < dt * 0.4) e.freeze = Math.max(e.freeze || 0, 1);
+    }
+    if (z.t === 'tornado' && Math.abs(e.x - z.x) < z.r && e.y > GROUND - 260) {
+      if (isMage) {
+        dmgEnemy(e, 6 * dt, null, true);
+        if (z.fire && !(e.burn > 0)) addBurn(e, 1, false, false, true);
+      } else if (!(e.tornT > 0) && e.kind !== 'golem') {
+        e.tornT = 1;
+        e.vy = -650;
+        e.vx = rnd(-260, 260);
+        if (!EK[e.kind].fly) e.air = true;
+        dmgEnemy(e, 10, e.x);
+        if (z.fire) addBurn(e, 1, false, false, true);
+      }
+    }
+  }
+  return sf;
+}
+function upMage(e, dt) {
+  const w = e.wz;
+  e.t += dt;
+  e.dance = Math.max(0, (e.dance || 0) - dt);
+  e.cocoon = Math.max(0, (e.cocoon || 0) - dt);
+  e.flash = Math.max(0, e.flash - dt);
+  if (e.ko) {
+    e.koT += dt;
+    return;
+  }
+  if (e.burn > 0) {
+    e.burn -= dt;
+    if (e.burn <= 0) e.burnS = 0;
+    dmgEnemy(e, 6 * (e.burnS || 1) * dt, null, true);
+    if (Math.random() < 0.6)
+      part(
+        'fire',
+        e.x + rnd(-25, 25),
+        e.y - rnd(0, e.h),
+        rnd(-20, 20),
+        rnd(-120, -40),
+        0.5,
+        rnd(8, 14),
+        e.curse ? 'purple' : e.blue ? 'blue' : 'orange'
+      );
+    if (e.ko) return;
+  }
+  e.slow = zoneFx(e, dt, true);
+  if (e.ko) return;
+  if (e.loveT > 0) {
+    e.loveT -= dt;
+    if (Math.random() < 0.1) part('heart', e.x, e.y - e.h, rnd(-20, 20), -60, 0.8, 10, '#ff6fae');
+  }
+  if (e.bubble > 0) {
+    e.bubble -= dt;
+    e.y += (GROUND - 230 - e.y) * 2 * dt;
+    if (e.bubble <= 0) {
+      burst(e.x, e.y - e.h / 2, '#a6f6ff', 16, 220);
+      sfx('pop');
+      e.air = true;
+      e.vy = 0;
+    }
+  } else if (e.air) {
+    e.vy += 1600 * dt;
+    e.y += e.vy * dt;
+    if (e.y >= GROUND) {
+      e.y = GROUND;
+      e.air = false;
+      dmgEnemy(e, 20, e.x);
+      txt(e.x, e.y - e.h - 20, 'PLOF', '#fff', 26);
+    }
+  } else {
+    if (e.jvy || e.jy < 0) {
+      e.jvy += 1900 * dt;
+      e.jy += e.jvy * dt;
+      if (e.jy >= 0) {
+        e.jy = 0;
+        e.jvy = 0;
+        for (let i = 0; i < 4; i++)
+          part(
+            'smoke',
+            e.x + rnd(-20, 20),
+            GROUND - 4,
+            rnd(-60, 60),
+            -20,
+            0.5,
+            10,
+            'rgba(200,190,170,.5)'
+          );
+      }
+    }
+    e.y = GROUND + (e.jy || 0);
+  }
+  if (e.freeze > 0) e.freeze -= dt;
+  if (e.stun > 0) {
+    e.stun -= dt;
+    if (e.sleep > 0 && Math.random() < dt * 2)
+      part('zz', e.x + 10, e.y - 150, 20, -30, 1.2, 18, '#c8d8ff');
+  }
+}
 function upEnemy(e, dt) {
+  if (e.kind === 'mage') {
+    upMage(e, dt);
+    return;
+  }
   const D = EK[e.kind];
   e.t += dt;
   e.flash = Math.max(0, e.flash - dt);
   e.swing = Math.max(0, e.swing - dt * 3);
+  e.grabCd = Math.max(0, e.grabCd - dt);
+  e.tornT = Math.max(0, (e.tornT || 0) - dt);
+  e.dance = Math.max(0, (e.dance || 0) - dt);
+  e.cocoon = Math.max(0, (e.cocoon || 0) - dt);
   if (e.burn > 0) {
     e.burn -= dt;
-    dmgEnemy(e, 7 * dt, null, true);
-    if (Math.random() < 0.6)
+    if (e.burn <= 0) e.burnS = 0;
+    dmgEnemy(e, 7 * (e.burnS || 1) * dt, null, true);
+    if (Math.random() < 0.4 + 0.1 * (e.burnS || 1))
       part(
         'fire',
         e.x + rnd(-e.w / 2, e.w / 2),
@@ -113,22 +302,42 @@ function upEnemy(e, dt) {
         rnd(-120, -40),
         0.5,
         rnd(8, 14),
-        e.blue ? 'blue' : 'orange'
+        e.curse ? 'purple' : e.blue ? 'blue' : 'orange'
       );
+    if (e.curse) {
+      e.spreadT -= dt;
+      if (e.spreadT <= 0) {
+        e.spreadT = 1;
+        for (const o of G.enemies)
+          if (
+            o !== e &&
+            !o.dead &&
+            !(o.burn > 0) &&
+            Math.abs(o.x - e.x) < 100 &&
+            Math.abs(o.y - e.y) < 120
+          ) {
+            o.burn = 6;
+            o.burnS = Math.max(1, (e.burnS || 1) - 1);
+            o.curse = true;
+            for (let i = 0; i < 6; i++)
+              part(
+                'fire',
+                (e.x + o.x) / 2,
+                e.y - e.h / 2,
+                rnd(-60, 60),
+                rnd(-60, 0),
+                0.4,
+                8,
+                'purple'
+              );
+            break;
+          }
+      }
+    }
     if (e.dead) return;
   }
-  let sf = 1;
-  for (const z of G.zones) {
-    const d = Math.hypot(e.x - z.x, e.y - e.h / 2 - z.y);
-    if (z.t === 'slow' && d < z.r) sf = 0.25;
-    if (z.t === 'hole' && d < z.r && e.kind !== 'golem') {
-      e.x += ((z.x - e.x) / (d + 1)) * 260 * dt;
-      if (D.fly) e.cruise += (z.y - e.cruise) * dt;
-      if (d < 70) dmgEnemy(e, 14 * dt, null, true);
-      if (Math.random() < 0.2)
-        part('spark', e.x, e.y - e.h / 2, (z.x - e.x) * 2, (z.y - e.y) * 2, 0.3, 3, '#b48cff');
-    }
-  }
+  const sf = zoneFx(e, dt, false);
+  if (e.dead) return;
   if (e.bubble > 0) {
     e.bubble -= dt;
     const ty = D.fly ? e.cruise - 120 : GROUND - 250;
@@ -172,19 +381,35 @@ function upEnemy(e, dt) {
           'rgba(200,190,170,.5)'
         );
     }
-    e.x = clamp(e.x, WIZ.x + 40, W + 80);
+    e.x = clamp(e.x, WZ[0].x + 40, W + 80);
     return;
   }
   if (e.freeze > 0) {
     e.freeze -= dt;
+    if (e.freeze <= 0) e.brittle = false;
     return;
   }
   if (e.stun > 0) {
     e.stun -= dt;
+    e.sleep = Math.max(0, (e.sleep || 0) - dt);
+    if (e.sleep > 0 && Math.random() < dt * 2)
+      part('zz', e.x + 10, e.y - e.h, 20, -30, 1.2, 18, '#c8d8ff');
     return;
   }
   if (e.happy > 0) {
     e.happy -= dt;
+    return;
+  }
+  if (e.fear > 0) {
+    e.fear -= dt;
+    e.dir = 1;
+    e.x += D.spd * 1.9 * dt;
+    if (Math.random() < 0.1)
+      part('drop', e.x, e.y - e.h, rnd(-40, 40), -120, 0.6, 3, '#bfe6ff', { g: 600 });
+    if (e.x > W + 60) {
+      e.dead = true;
+      G.score++;
+    }
     return;
   }
   if (Math.abs(e.vx) > 1) {
@@ -203,20 +428,87 @@ function upEnemy(e, dt) {
     }
     return;
   }
-  let tx = WIZ.x;
+  if (e.poss > 0) {
+    e.poss -= dt;
+    if (Math.random() < 0.2)
+      part('smoke', e.x, e.y - e.h / 2, rnd(-20, 20), -40, 0.6, 10, 'rgba(150,255,150,.3)');
+    if (e.poss <= 0) {
+      kill(e);
+      return;
+    }
+    let t = null,
+      bd = 1e9;
+    for (const o of G.enemies) {
+      if (o === e || o.dead || o.poss || o.charmed) continue;
+      const d = Math.abs(o.x - e.x);
+      if (d < bd) {
+        bd = d;
+        t = o;
+      }
+    }
+    if (t) {
+      e.dir = t.x < e.x ? -1 : 1;
+      if (bd > (e.w + t.w) / 2 + 6) e.x += e.dir * spd * 1.4 * dt;
+      else {
+        e.atk += dt;
+        if (e.atk > 0.6) {
+          e.atk = 0;
+          e.swing = 1;
+          dmgEnemy(t, D.pow * 2 + 12, t.x);
+          burst(t.x, t.y - t.h / 2, '#9dff9d', 8, 200);
+        }
+      }
+      if (D.fly) e.y += (t.y - e.y) * dt;
+    } else {
+      e.dir = 1;
+      e.x += spd * dt;
+      if (e.x > W + 60) {
+        e.dead = true;
+        G.score++;
+      }
+    }
+    return;
+  }
+  let tx = WZ[0].x;
   const coin = nearestCoin(e);
   if (coin) tx = coin.x;
   const dir = tx < e.x ? -1 : 1;
   e.dir = dir;
   if (Math.abs(tx - e.x) > 6) e.x += dir * spd * dt;
-  if (coin && !coin.fly && coin.ground && Math.abs(coin.x - e.x) < 26 && !D.fly) {
-    coin.dead = true;
-    e.happy = 1.4;
-    txt(e.x, e.y - e.h - 14, 'Ooh, une pièce !', '#ffc93c', 22);
-    sfx('coin');
+  if (
+    coin &&
+    !coin.fly &&
+    coin.ground &&
+    Math.abs(coin.x - e.x) < (coin.chest ? 40 : 26) &&
+    !D.fly
+  ) {
+    if (coin.chest) {
+      coin.dead = true;
+      for (const o of G.enemies)
+        if (!o.dead && !o.poss && o.kind !== 'mage' && Math.abs(o.x - coin.x) < 260) o.happy = 3;
+      burst(coin.x, GROUND - 30, '#ffc93c', 40, 380, 'star', 8);
+      txt(coin.x, GROUND - 120, 'Un trésor !!', '#ffc93c', 36);
+      sfx('chest');
+    } else if (coin.cursed) explodeCoin(coin);
+    else {
+      coin.dead = true;
+      e.happy = 1.4;
+      txt(e.x, e.y - e.h - 14, 'Ooh, une pièce !', '#ffc93c', 22);
+      sfx('coin');
+    }
+    if (e.dead) return;
   }
+  if (e.kind === 'golem') {
+    e.stepT = (e.stepT || 0) + dt;
+    if (e.stepT > 0.8) {
+      e.stepT = 0;
+      sfx('step');
+      G.shake = Math.max(G.shake, 2);
+    }
+  }
+  if (D.fly && Math.random() < dt * 0.4) sfx('squeak');
   if (D.fly) {
-    const ty = e.x < WIZ.x + 320 ? GROUND - 70 : e.cruise;
+    const ty = e.x < WZ[0].x + 320 ? GROUND - 70 : e.cruise;
     e.y += (ty + Math.sin(e.t * 3) * 26 - e.y) * Math.min(1, 3 * dt);
   } else
     for (const q of G.props) {
@@ -232,6 +524,16 @@ function upEnemy(e, dt) {
         break;
       }
       e.x = e.x > q.x + q.w / 2 ? q.x + q.w + e.w / 2 : q.x - e.w / 2;
+      if (q.kind === 'tomb' && e.grabCd <= 0 && e.kind !== 'golem') {
+        e.stun = 1.6;
+        e.grabCd = 4;
+        q.handT = 0.9;
+        q.handX = e.x;
+        txt(e.x, e.y - e.h - 14, 'Une main !', '#9dff9d', 24);
+        sfx('evil');
+        dmgEnemy(e, 8, e.x);
+        break;
+      }
       e.atk += dt * sf;
       if (e.atk > 0.7) {
         e.atk = 0;
@@ -240,9 +542,24 @@ function upEnemy(e, dt) {
       }
       break;
     }
-  if (e.x - e.w / 2 < WIZ.x + 30) {
-    e.dead = true;
-    burst(e.x, e.y - e.h / 2, D.col, 16, 260);
-    hurtWizard();
+  if (e.x - e.w / 2 < WZ[0].x + 30) {
+    const w = WZ[0];
+    if (w.shield > 0) {
+      e.x = w.x + 70 + e.w / 2;
+      if (e.kind !== 'golem') {
+        if (!D.fly) e.air = true;
+        e.vy = -(w.shieldBounce ? 900 : 450);
+        e.vx = w.shieldBounce ? 950 : 380;
+      }
+      if (Math.random() < 0.5)
+        txt(e.x, e.y - e.h - 20, w.shieldBounce ? 'BOING !' : 'BLOQUÉ !', '#9fe3ff', 24);
+      sfx(w.shieldBounce ? 'boing' : 'shield');
+      if (w.shieldLv >= 3 || w.shieldDark) dmgEnemy(e, 30, e.x);
+      if (w.shieldIce) e.freeze = Math.max(e.freeze || 0, 2);
+    } else {
+      e.dead = true;
+      burst(e.x, e.y - e.h / 2, D.col, 16, 260);
+      hurtWizard();
+    }
   }
 }
