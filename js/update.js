@@ -10,6 +10,8 @@ function update(dt) {
     if (G.firing && w0.cd <= 0 && !G.over) fire(w0);
     w0.recoil = Math.max(0, w0.recoil - dt * 5);
     w0.hurt = Math.max(0, w0.hurt - dt);
+    w0.shield = Math.max(0, (w0.shield || 0) - dt);
+    w0.shieldCd = (w0.shieldCd || 0) - dt;
   } else upDuel(dt);
   for (const l of G.later) l.t -= dt;
   const due = G.later.filter(l => l.t <= 0);
@@ -137,6 +139,7 @@ function update(dt) {
   }
   for (const z of G.zones) {
     z.l -= dt;
+    upZone(z, dt);
     if (z.t === 'blizzard')
       for (let i = 0; i < 3; i++)
         part(
@@ -185,6 +188,7 @@ function update(dt) {
         rnd(14, 24),
         'rgba(120,255,90,.25)'
       );
+    if (z.l <= 0 && z.t === 'bomb') explodeBomb(z);
     if (z.l <= 0 && z.boom) {
       aoe(z.x, z.y, 150, 30 * z.boom, 350, z.own);
       for (let i = 0; i < 40; i++)

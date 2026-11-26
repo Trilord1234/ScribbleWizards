@@ -732,6 +732,39 @@ function drawWizard(w, gy, e) {
       );
   }
   ctx.restore();
+  if (w.shield > 0 && !ko) {
+    const a = Math.min(1, w.shield * 2) * (0.55 + 0.2 * Math.sin(G.time * 6)),
+      col = w.shieldDark ? '#b46bff' : w.shieldIce ? '#dff8ff' : '#62c8ff';
+    ctx.save();
+    ctx.globalAlpha = a;
+    ctx.translate(x, g - 80);
+    ctx.strokeStyle = col;
+    ctx.lineWidth = 4;
+    ctx.fillStyle = hexA(w.shieldDark ? '#b46bff' : '#62c8ff', w.shieldIce ? 0.32 : 0.12);
+    ctx.beginPath();
+    ctx.arc(0, 0, 98, 0, TAU);
+    ctx.fill();
+    ctx.stroke();
+    ctx.lineWidth = 1.5;
+    for (let i = 0; i < 6; i++) {
+      const an = (i / 6) * TAU + G.time * 0.6;
+      ctx.beginPath();
+      ctx.arc(Math.cos(an) * 60, Math.sin(an) * 60, 34, 0, TAU);
+      ctx.stroke();
+    }
+    if (w.shieldDark || w.shieldLv >= 3) {
+      ctx.fillStyle = col;
+      for (let i = 0; i < 14; i++) {
+        const an = (i / 14) * TAU + G.time * 0.3;
+        ctx.beginPath();
+        ctx.moveTo(Math.cos(an - 0.08) * 98, Math.sin(an - 0.08) * 98);
+        ctx.lineTo(Math.cos(an) * 116, Math.sin(an) * 116);
+        ctx.lineTo(Math.cos(an + 0.08) * 98, Math.sin(an + 0.08) * 98);
+        ctx.fill();
+      }
+    }
+    ctx.restore();
+  }
   ctx.font = '800 20px Nunito, sans-serif';
   ctx.textAlign = 'center';
   ctx.lineWidth = 4;
@@ -764,6 +797,10 @@ function drawEnemy(e) {
     ctx.fill();
   }
   ctx.translate(e.x + (e.flash > 0 ? rnd(-3, 3) : 0), e.y);
+  if (e.dance > 0) {
+    ctx.translate(0, -Math.abs(Math.sin(G.time * 10)) * 10);
+    ctx.rotate(Math.sin(G.time * 12) * 0.3);
+  }
   const dir = e.dir;
   if (e.kind === 'slime') {
     const hop = still || e.bubble > 0 ? 0 : Math.abs(Math.sin(e.t * 6)) * 16,
@@ -994,6 +1031,20 @@ function overlays(e, frozen) {
     ctx.stroke();
     ctx.fillStyle = 'rgba(255,255,255,.7)';
     ctx.fillRect(-ww / 2 - 2, -hh - 2, 6, hh * 0.5);
+  }
+  if (e.cocoon > 0) {
+    ctx.fillStyle = 'rgba(245,245,250,.85)';
+    ctx.beginPath();
+    ctx.ellipse(0, -hh / 2, ww * 0.65, hh * 0.6, 0, 0, TAU);
+    ctx.fill();
+    ctx.strokeStyle = 'rgba(180,180,200,.9)';
+    ctx.lineWidth = 2;
+    for (let i = 0; i < 5; i++) {
+      ctx.beginPath();
+      ctx.moveTo(-ww * 0.6, -hh * (0.15 + i * 0.17));
+      ctx.quadraticCurveTo(0, -hh * (0.05 + i * 0.17), ww * 0.6, -hh * (0.2 + i * 0.17));
+      ctx.stroke();
+    }
   }
   if (e.bubble > 0) {
     const r = Math.max(ww, hh) * 0.7;
@@ -1435,6 +1486,46 @@ function drawProj(p) {
           ctx.lineWidth = 2;
           ctx.stroke();
         }
+      } else if (sh === 'note') {
+        ctx.rotate(Math.sin(t * 8) * 0.3);
+        ctx.fillStyle = dk ? '#c34dff' : '#ff9de2';
+        ctx.beginPath();
+        ctx.ellipse(-r * 0.35, r * 0.45, r * 0.6, r * 0.45, -0.4, 0, TAU);
+        ctx.fill();
+        ctx.fillRect(r * 0.1, -r * 1.1, r * 0.22, r * 1.6);
+        ctx.beginPath();
+        ctx.moveTo(r * 0.32, -r * 1.1);
+        ctx.quadraticCurveTo(r * 1.1, -r * 0.8, r * 0.8, -r * 0.1);
+        ctx.quadraticCurveTo(r * 0.9, -r * 0.6, r * 0.32, -r * 0.6);
+        ctx.fill();
+      } else if (sh === 'bomb') {
+        ctx.fillStyle = '#1a1420';
+        ctx.beginPath();
+        ctx.arc(0, 0, r * 1.05, 0, TAU);
+        ctx.fill();
+        ctx.fillStyle = 'rgba(255,255,255,.35)';
+        ctx.beginPath();
+        ctx.arc(-r * 0.35, -r * 0.35, r * 0.25, 0, TAU);
+        ctx.fill();
+        ctx.strokeStyle = '#8a6a3a';
+        ctx.lineWidth = 2.5;
+        ctx.beginPath();
+        ctx.moveTo(r * 0.5, -r * 0.8);
+        ctx.quadraticCurveTo(r * 0.9, -r * 1.4, r * 0.6, -r * 1.6);
+        ctx.stroke();
+      } else if (sh === 'potion') {
+        ctx.rotate(t * 5);
+        ctx.fillStyle = 'rgba(230,250,255,.85)';
+        ctx.beginPath();
+        ctx.arc(0, r * 0.25, r * 0.85, 0, TAU);
+        ctx.fill();
+        ctx.fillRect(-r * 0.25, -r * 1.05, r * 0.5, r * 0.7);
+        ctx.fillStyle = dk ? '#8dff6a' : '#7cf27c';
+        ctx.beginPath();
+        ctx.arc(0, r * 0.3, r * 0.68, 0, Math.PI);
+        ctx.fill();
+        ctx.fillStyle = '#8a5a2b';
+        ctx.fillRect(-r * 0.3, -r * 1.25, r * 0.6, r * 0.3);
       } else if (sh === 'rock') {
         ctx.rotate(t * 4);
         ctx.fillStyle = '#5a5560';
@@ -1650,6 +1741,7 @@ function drawPlant(pl) {
   }
   ctx.restore();
 }
+const FRONTZ = new Set(['thorns', 'tornado', 'cloud', 'bomb', 'pfx']);
 function drawZone(z) {
   const f = Math.min(1, z.l / 0.5, (z.ml - z.l) / 0.3);
   ctx.save();
@@ -1702,6 +1794,91 @@ function drawZone(z) {
     ctx.beginPath();
     ctx.arc(0, 0, z.r, 0, TAU);
     ctx.fill();
+  } else if (z.t === 'bomb') {
+    ctx.globalAlpha = 1;
+    const bl = z.l < 0.5 && Math.floor(z.l * 10) % 2,
+      r = z.lv >= 3 ? 24 : z.mini ? 9 : 15;
+    ctx.fillStyle = bl ? '#ff3b3b' : '#1a1420';
+    ctx.beginPath();
+    ctx.arc(0, -r, r, 0, TAU);
+    ctx.fill();
+    ctx.fillStyle = 'rgba(255,255,255,.35)';
+    ctx.beginPath();
+    ctx.arc(-r * 0.35, -r * 1.35, r * 0.25, 0, TAU);
+    ctx.fill();
+    ctx.strokeStyle = '#8a6a3a';
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.moveTo(r * 0.4, -r * 1.8);
+    ctx.quadraticCurveTo(r * 0.8, -r * 2.4, r * 0.5, -r * 2.5);
+    ctx.stroke();
+  } else if (z.t === 'cloud') {
+    const w2 = z.r;
+    ctx.fillStyle = z.storm ? '#4a4f66' : z.snow ? '#eef6ff' : '#d8e4f4';
+    [
+      [0, -10, w2 * 0.45],
+      [-w2 * 0.45, 8, w2 * 0.32],
+      [w2 * 0.45, 6, w2 * 0.34],
+      [-w2 * 0.15, 14, w2 * 0.36],
+      [w2 * 0.2, 16, w2 * 0.34],
+    ].forEach(([cx, cy, r]) => {
+      ctx.beginPath();
+      ctx.arc(cx, cy, Math.min(r, 95), 0, TAU);
+      ctx.fill();
+    });
+    ctx.fillStyle = z.storm ? '#33374a' : '#b9c8dc';
+    ctx.fillRect(-w2 * 0.7, 22, w2 * 1.4, 12);
+  } else if (z.t === 'tornado') {
+    for (let i = 0; i < 9; i++) {
+      const yy = -i * 22,
+        rw = z.r * (0.3 + i * 0.12),
+        off = Math.sin(G.time * 8 + i * 0.7) * 12;
+      ctx.strokeStyle = z.fire
+        ? i % 2
+          ? 'rgba(255,140,40,.85)'
+          : 'rgba(255,220,120,.75)'
+        : i % 2
+          ? 'rgba(200,235,230,.7)'
+          : 'rgba(150,200,195,.7)';
+      ctx.lineWidth = 5;
+      ctx.beginPath();
+      ctx.ellipse(off, yy, rw, rw * 0.25, 0, 0, TAU);
+      ctx.stroke();
+    }
+  } else if (z.t === 'web') {
+    ctx.strokeStyle = 'rgba(255,255,255,.8)';
+    ctx.lineWidth = 1.5;
+    ctx.scale(1, 0.25);
+    for (let i = 0; i < 8; i++) {
+      const a = (i / 8) * TAU;
+      ctx.beginPath();
+      ctx.moveTo(0, 0);
+      ctx.lineTo(Math.cos(a) * z.r, Math.sin(a) * z.r);
+      ctx.stroke();
+    }
+    for (let j = 1; j <= 3; j++) {
+      ctx.beginPath();
+      for (let i = 0; i <= 8; i++) {
+        const a = (i / 8) * TAU,
+          rr = (z.r * j) / 3.3;
+        i
+          ? ctx.lineTo(Math.cos(a) * rr, Math.sin(a) * rr)
+          : ctx.moveTo(Math.cos(a) * rr, Math.sin(a) * rr);
+      }
+      ctx.stroke();
+    }
+  } else if (z.t === 'pfx') {
+    ctx.rotate(G.time * 6);
+    ctx.strokeStyle = '#c27bff';
+    ctx.lineWidth = 5;
+    ctx.beginPath();
+    ctx.ellipse(0, 0, z.r * (1.2 - (z.l / z.ml) * 0.4), z.r * 0.45, 0, 0, TAU);
+    ctx.stroke();
+    ctx.strokeStyle = '#62f0dd';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.ellipse(0, 0, z.r * 0.7, z.r * 0.25, 0, 0, TAU);
+    ctx.stroke();
   } else if (z.t === 'fire') {
     for (let i = 0; i < 7; i++) {
       const fx = -z.r + (i * z.r) / 3,
@@ -1895,7 +2072,7 @@ function drawPart(p, m) {
     case 'zz':
       ctx.globalAlpha = f;
       outlined(
-        'z',
+        p.ch || 'z',
         p.x,
         p.y,
         p.c,
@@ -2073,7 +2250,7 @@ function render() {
     ctx.fillRect(s.x, s.y, s.s, s.s);
   }
   ctx.globalAlpha = 1;
-  for (const z of G.zones) if (z.t !== 'thorns') drawZone(z);
+  for (const z of G.zones) if (!FRONTZ.has(z.t)) drawZone(z);
   for (const pl of G.plants) drawPlant(pl);
   const active = G.mode === 'duel' ? WZ : [WZ[0]];
   for (const w of active) {
@@ -2133,7 +2310,7 @@ function render() {
   }
   for (const e of G.enemies) drawEnemy(e);
   if (G.mode === 'arena') drawWizard(WZ[0], GROUND, null);
-  for (const z of G.zones) if (z.t === 'thorns') drawZone(z);
+  for (const z of G.zones) if (FRONTZ.has(z.t)) drawZone(z);
   for (const p of G.projs) drawProj(p);
   drawParticles();
   for (const b of G.bolts) {
