@@ -19,15 +19,22 @@ function makeProj(spec, x, y, a, o = {}) {
     dk = spec.dark;
   const spd = projSpeed(spec, o);
   let r = (o.r || 11) * Math.pow(1.65, c('mountain'));
+  if (spec.body === 'square') r *= Math.pow(1.15, c('square') - 1);
+  if (spec.body === 'fish') r *= Math.pow(1.25, c('fish') - 1);
   if (o.pellet) r *= 0.62;
-  r = Math.min(r, 80);
+  r = Math.min(r, 95);
   const g = o.g != null ? o.g : projGrav(spec);
   let dmg =
-    (o.pellet ? 11 : 20) *
-    (spec.body === 'square' ? 2 : 1) *
+    ((o.pellet ? 11 : 20) * (spec.body === 'square' ? 1 + c('square') : 1) +
+      (spec.body === 'fish' ? 6 * (c('fish') - 1) : 0) +
+      (spec.body === 'coin' ? 4 * (c('coin') - 1) : 0)) *
     Math.pow(1.35, c('mountain')) *
     (o.dm || 1);
-  let pierce = (spec.saw ? 8 : 0) + 2 * c('bite') + (S.has('ram') ? 4 : 0);
+  let pierce =
+    8 * (spec.saw | 0) +
+    2 * c('bite') +
+    (S.has('ram') ? 4 : 0) +
+    (c('ghost') > 1 ? 3 * (c('ghost') - 1) : 0);
   if (dk && spec.body === 'fish') {
     pierce += 3;
     dmg += 8;
@@ -35,6 +42,7 @@ function makeProj(spec, x, y, a, o = {}) {
   let fish = FISH[(Math.random() * FISH.length) | 0];
   if (S.has('sawfish')) fish = SAWFISH;
   else if (dk) fish = PIRANHA;
+  else if (c('fish') >= 3) fish = WHALE;
   return {
     spec,
     owner: o.owner || null,
@@ -159,9 +167,16 @@ function fire(w, ang) {
         )
       );
   } else if (spec.dark && spec.n.zigzag) {
-    for (let i = 0; i < 3; i++)
+    const nb = Math.min(2 + spec.n.zigzag, 7);
+    for (let i = 0; i < nb; i++)
       G.projs.push(
-        makeProj(spec, tx, ty, a + (i - 1) * 0.25, Object.assign({ r: 8, spd: rnd(0.9, 1.1) }, o))
+        makeProj(
+          spec,
+          tx,
+          ty,
+          a + (i - (nb - 1) / 2) * 0.22,
+          Object.assign({ r: 8, spd: rnd(0.9, 1.1) }, o)
+        )
       );
   } else {
     const p = makeProj(spec, tx, ty, a, o);
@@ -527,22 +542,25 @@ function hitEnemy(e, p, x, y) {
     burst(x, y, '#ffe9a8', 10, 320);
   }
   dmgEnemy(e, d, x);
-  if (dk && (c('heart') || c('bite'))) steal(p, d, x, y);
+  if (dk && (c('heart') || c('bite')))
+    steal(p, d * (0.6 + 0.4 * (c('heart') + c('bite') - 1)), x, y);
   if (!mage && e.kind !== 'golem' && !EK[e.kind].fly) {
     e.vx +=
       Math.sign(p.vx || 1) *
       120 *
-      (k.body === 'square' ? 2.5 : 1) *
+      (k.body === 'square' ? 1.5 + c('square') : 1) *
       (S.has('ram') ? 3 : 1) *
       Math.pow(1.3, c('mountain'));
   }
   if (c('flame')) {
-    e.burn = dk ? 6 : 3.2;
-    e.blue = S.has('icefire');
-    e.curse = dk;
+    addBurn(e, c('flame'), dk, S.has('icefire'));
   }
   if (c('snow')) {
-    e.freeze = 2 + c('snow') * 0.6;
+    const cap = mage ? 4 : 8,
+      was = e.freeze > 0 ? e.freeze : 0;
+    e.freeze = Math.min(cap, was + 1.4 + c('snow') * 0.6);
+    if (was > 0)
+      txt(e.x, e.y - e.h - 36, 'Gel +' + (e.freeze - was).toFixed(1) + ' s', '#bff0ff', 20);
     e.brittle = dk;
     sfx('freeze');
     burst(x, y, dk ? '#9dffd6' : '#dff8ff', 10, 200, 'snow', 5);
@@ -552,7 +570,7 @@ function hitEnemy(e, p, x, y) {
       e.stun = Math.max(e.stun || 0, 1.5);
       txt(e.x, e.y - e.h - 20, 'Paralysé !', '#9dff9d', 26);
     } else if (e.kind !== 'golem') {
-      e.poss = 7;
+      e.poss = 7 * c('ghost');
       e.burn = 0;
       txt(e.x, e.y - e.h - 20, 'Possédé !', '#9dff9d', 26);
       sfx('evil');
@@ -562,20 +580,30 @@ function hitEnemy(e, p, x, y) {
     if (dk) {
       if (!p.zoned) {
         p.zoned = true;
-        poison(x, y, p.owner);
+        poison(x, y, p.owner, c('bubble'));
       }
     } else if (e.kind !== 'golem') {
-      e.bubble = 3;
+      e.bubble = Math.min(mage ? 4 : 9, (e.bubble > 0 ? e.bubble : 0) + 2 + c('bubble'));
       e.air = false;
       sfx('pop');
     }
   }
   if (c('hourglass') && !p.zoned) {
     p.zoned = true;
-    if (dk) haste(p.owner);
-    else G.zones.push({ t: 'slow', x, y, r: 150, l: 5, ml: 5, own: p.owner });
+    if (dk) haste(p.owner, c('hourglass'));
+    else
+      G.zones.push({
+        t: 'slow',
+        x,
+        y,
+        r: 150 * (1 + 0.35 * (c('hourglass') - 1)),
+        l: 5,
+        ml: 5,
+        own: p.owner,
+        pow: c('hourglass'),
+      });
   }
-  if (c('bolt')) chain(e, c('bolt') + (dk ? 1 : 0), p.owner, dk);
+  if (c('bolt')) chain(e, c('bolt') + (dk ? 1 : 0), p.owner, dk, 14 + 6 * (c('bolt') - 1));
   if (k.body === 'fish') {
     for (let i = 0; i < 10; i++)
       part('drop', x, y, rnd(-200, 200), rnd(-350, -80), 1, rnd(3, 6), dk ? '#ff6b6b' : '#7fd6ff', {
@@ -586,14 +614,32 @@ function hitEnemy(e, p, x, y) {
   burst(x, y, spellCol(k), 8, 240);
   sfx('hit');
 }
-function haste(w) {
+function haste(w, n = 1) {
   if (!w) return;
-  w.haste = 5;
-  txt(w.x, GROUND - 210, 'Plus vite !', '#ff8a8a', 26);
+  w.haste = Math.min(20, Math.max(w.haste, 0) + 5 * n);
+  txt(w.x, GROUND - 210, 'Plus vite ! ' + Math.ceil(w.haste) + ' s', '#ff8a8a', 26);
   sfx('evil');
 }
-function poison(x, y, own) {
-  G.zones.push({ t: 'poison', x, y: Math.min(y, GROUND - 40), r: 110, l: 4, ml: 4, own });
+function addBurn(e, n, dk, blue) {
+  const was = e.burn > 0 ? e.burnS || 1 : 0;
+  e.burnS = Math.min(10, was + n);
+  e.burn = Math.max(e.burn || 0, dk ? 6 : 3.2);
+  e.blue = blue;
+  e.curse = dk;
+  if (e.burnS > 1)
+    txt(e.x, (e.y || GROUND) - (e.h || 60) - 36, 'Feu x' + e.burnS, dk ? '#e0a6ff' : '#ffb36b', 22);
+}
+function poison(x, y, own, n = 1) {
+  G.zones.push({
+    t: 'poison',
+    x,
+    y: Math.min(y, GROUND - 40),
+    r: 110 * (1 + 0.35 * (n - 1)),
+    l: 4,
+    ml: 4,
+    own,
+    pow: n,
+  });
   for (let i = 0; i < 20; i++)
     part(
       'smoke',
@@ -689,7 +735,7 @@ function charm(e) {
     part('heart', e.x, e.y - e.h / 2, rnd(-120, 120), rnd(-200, -60), 1, 12, '#ff6fae');
   sfx('pop');
 }
-function chain(e0, n, own, dk) {
+function chain(e0, n, own, dk, bd0 = 14) {
   let cur = e0;
   const done = new Set([e0]);
   sfx('zap');
@@ -712,7 +758,7 @@ function chain(e0, n, own, dk) {
     }
     G.bolts.push({ pts: jag(x1, y1, best.x, best.y - best.h / 2), l: 0.3, dk });
     done.add(best);
-    dmgEnemy(best, 14, best.x);
+    dmgEnemy(best, bd0, best.x);
     best.stun = Math.max(best.stun || 0, 0.6);
     cur = best;
   }
@@ -814,11 +860,11 @@ function end(p, x, y, why) {
         t: 'hole',
         x,
         y: Math.min(y, GROUND - 40),
-        r: 190,
+        r: 190 * (1 + 0.25 * (c('star') - 1)),
         l: 1.3,
         ml: 1.3,
         own,
-        boom: true,
+        boom: c('star'),
       });
       txt(x, y - 40, 'SHHHLURP', '#c39bff', 30);
       sfx('evil');
@@ -844,7 +890,7 @@ function end(p, x, y, why) {
       if (S.has('starlove')) {
         for (const e of G.enemies)
           if (isFoe(e, own) && Math.hypot(e.x - x, e.y - e.h / 2 - y) < R + 60) charm(e);
-      } else aoe(x, y, R, 18, 0, own);
+      } else aoe(x, y, R, 18 * c('star'), 0, own);
       sfx('boom');
       txt(x, y - 40, 'PAF !', '#fff07a', 34);
     }
@@ -858,7 +904,15 @@ function end(p, x, y, why) {
     sfx('boom');
     chips(x, GROUND, '#5a7b3a', 12);
     if (dk && !S.has('blackhole'))
-      G.zones.push({ t: 'hole', x, y: GROUND - 60, r: 180, l: 2, ml: 2, own });
+      G.zones.push({
+        t: 'hole',
+        x,
+        y: GROUND - 60,
+        r: 180,
+        l: 2 * c('gravity'),
+        ml: 2 * c('gravity'),
+        own,
+      });
   }
   if (S.has('steam')) {
     for (let i = 0; i < 30; i++)
@@ -899,20 +953,34 @@ function end(p, x, y, why) {
     txt(x, y - 40, 'BADABOUM !', '#ffb36b', 34);
     sfx('boom');
   }
-  if (c('wall') && !p.frag) spawnWall(x, S, dk);
+  if (c('wall') && !p.frag) {
+    const n = c('wall');
+    for (let i = 0; i < n; i++) spawnWall(x + (i - (n - 1) / 2) * 75 * (x < W / 2 ? 1 : 1), S, dk);
+  }
   if (S.has('pyramid') && !p.frag) spawnPyramid(x);
   if (c('tree')) {
-    if (dk) thorns(x, own);
-    if (!dk || S.has('xmas') || S.has('money'))
-      addPlant(
-        x,
-        S.has('xmas') ? 'xmas' : S.has('money') ? 'money' : Math.random() < 0.35 ? 'pine' : 'tree'
-      );
+    const n = c('tree');
+    if (dk) thorns(x, own, n);
+    if (!dk || S.has('xmas') || S.has('money')) {
+      const ty = S.has('xmas') ? 'xmas' : S.has('money') ? 'money' : null;
+      if (n >= 3) addPlant(x, ty || 'tree', 1.9);
+      else
+        for (let i = 0; i < n; i++)
+          addPlant(x + (i - (n - 1) / 2) * 70, ty || (Math.random() < 0.35 ? 'pine' : 'tree'));
+    }
   }
   if (k.body === 'coin' && !p.love)
-    addCoin(x, Math.min(y, GROUND - 12), rnd(-60, 60), -260, dk, own);
-  if (c('bubble') && dk && !p.zoned) poison(x, y, own);
-  if (c('hourglass') && dk && !p.zoned) haste(own);
+    for (let i = 0; i < c('coin'); i++)
+      addCoin(
+        x,
+        Math.min(y, GROUND - 12),
+        rnd(-60, 60) + (i ? rnd(-120, 120) : 0),
+        -260 - (i ? rnd(0, 200) : 0),
+        dk,
+        own
+      );
+  if (c('bubble') && dk && !p.zoned) poison(x, y, own, c('bubble'));
+  if (c('hourglass') && dk && !p.zoned) haste(own, c('hourglass'));
   if (c('flame'))
     for (let i = 0; i < 10; i++)
       part(
@@ -928,12 +996,12 @@ function end(p, x, y, why) {
   if (c('snow')) burst(x, y, dk ? '#9dffd6' : '#e6fbff', 12, 200, 'snow', 5);
   if (why !== 'air' && !c('egg')) sfx('hit');
 }
-function thorns(x, own) {
+function thorns(x, own, n = 1) {
   G.zones.push({
     t: 'thorns',
     x: clamp(x, 80, W - 80),
     y: GROUND,
-    r: 90,
+    r: 90 * (1 + 0.5 * (n - 1)),
     l: 7,
     ml: 7,
     own,

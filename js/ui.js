@@ -23,7 +23,16 @@ function renderPreview(t) {
   pctx.fillStyle = g;
   pctx.fillRect(0, 0, w, h);
   pctx.translate(w / 2, h / 2);
-  drawCircle(pctx, w * 0.4, cw.layers, cw.saw, t, 1, true, cw.dark);
+  drawCircle(
+    pctx,
+    (w * 0.4) / (1 + 0.09 * Math.max(0, cw.saw - 1)),
+    cw.layers,
+    cw.saw,
+    t,
+    1,
+    true,
+    cw.dark
+  );
 }
 function icon(k, px, dk) {
   const c = document.createElement('canvas'),
@@ -55,7 +64,13 @@ function buildPalette() {
       b.append(sp);
       b.title = symDesc(s.k, dk);
       const show = () =>
-        ($('#hint').textContent = symName(s.k, CW().dark) + ' : ' + symDesc(s.k, CW().dark));
+        ($('#hint').textContent =
+          symName(s.k, CW().dark) +
+          ' : ' +
+          symDesc(s.k, CW().dark) +
+          ' En mettre plusieurs : ' +
+          stkDesc(s.k, CW().dark) +
+          '.');
       b.addEventListener('click', () => addLayer(s.k));
       b.addEventListener('mouseenter', show);
       b.addEventListener('focus', show);
@@ -66,17 +81,26 @@ function buildPalette() {
 function addLayer(k) {
   const w = CW();
   if (k === 'saw') {
-    w.saw = !w.saw;
-    $('#hint').textContent = w.saw
-      ? "Dents de scie posées à l'extérieur du cercle."
-      : 'Dents de scie retirées.';
+    if (w.saw >= 3) {
+      $('#hint').textContent = '3 rangées de dents de scie maximum !';
+      return;
+    }
+    w.saw++;
+    $('#hint').textContent =
+      w.saw > 1
+        ? 'Dents de scie x' + w.saw + ' : ' + STK.saw + '.'
+        : "Dents de scie posées à l'extérieur du cercle.";
   } else {
     if (w.layers.length >= MAXL) {
       $('#hint').textContent = 'Le cercle est plein ! (' + MAXL + ' dessins maximum)';
       return;
     }
     w.layers.push(k);
-    $('#hint').textContent = symName(k, w.dark) + ' ajouté au centre du cercle.';
+    const n = w.layers.filter(x => x === k).length;
+    $('#hint').textContent =
+      n > 1
+        ? symName(k, w.dark) + ' x' + n + ' : ' + stkDesc(k, w.dark) + ' !'
+        : symName(k, w.dark) + ' ajouté au centre du cercle.';
   }
   changed();
 }
@@ -99,11 +123,11 @@ function renderLayers() {
     li.append(n, icon('saw', 30, w.dark));
     const nm = document.createElement('span');
     nm.className = 'nm';
-    nm.textContent = 'Dents de scie (dehors)';
+    nm.textContent = 'Dents de scie (dehors)' + (w.saw > 1 ? ' x' + w.saw : '');
     li.append(nm);
     li.append(
-      mini('✕', 'Retirer', () => {
-        w.saw = false;
+      mini('✕', 'Retirer une rangée', () => {
+        w.saw--;
         changed();
       })
     );
@@ -178,17 +202,37 @@ function renderReading() {
   const ol = document.createElement('ol');
   if (w.saw) {
     const li = document.createElement('li');
-    li.textContent = 'Dehors, dents de scie : ' + SM.saw.d.replace('(Extérieur du cercle) ', '');
+    li.textContent =
+      'Dehors, dents de scie' +
+      (w.saw > 1 ? ' x' + w.saw : '') +
+      ' : ' +
+      SM.saw.d.replace('(Extérieur du cercle) ', '') +
+      (w.saw > 1 ? ' Empilées : ' + STK.saw + '.' : '');
     li.style.listStyle = 'none';
     ol.append(li);
   }
+  const seen = {};
   w.layers.forEach(k => {
+    seen[k] = (seen[k] || 0) + 1;
     const li = document.createElement('li');
     li.textContent = symName(k, w.dark) + ' : ' + symDesc(k, w.dark);
+    if (seen[k] > 1)
+      li.textContent =
+        symName(k, w.dark) + ' encore (x' + seen[k] + ') : ' + stkDesc(k, w.dark) + '.';
     if (w.dark && DARK[k]) li.style.color = '#d9a6ff';
+    if (seen[k] > 1) li.style.color = '#7cf2c8';
     ol.append(li);
   });
   el.append(ol);
+  const multi = Object.entries(spec.n).filter(([k, v]) => v > 1);
+  if (multi.length) {
+    const d = document.createElement('div');
+    d.className = 'syn';
+    d.style.color = '#7cf2c8';
+    d.textContent =
+      '⇈ Empilés : ' + multi.map(([k, v]) => symName(k, w.dark) + ' x' + v).join(', ');
+    el.append(d);
+  }
   for (const s of spec.syn) {
     const d = document.createElement('div');
     d.className = 'syn';
@@ -250,7 +294,7 @@ function renderGrim() {
     b.addEventListener('click', () => {
       const w = CW();
       w.layers = cleanL(g.l);
-      w.saw = !!g.s;
+      w.saw = clamp(Number(g.s) || 0, 0, 3);
       w.dark = !!g.d;
       saveW(w);
       renderWizard();
@@ -281,13 +325,13 @@ $('#save').addEventListener('click', () => {
 $('#undo').addEventListener('click', () => {
   const w = CW();
   if (w.layers.length) w.layers.pop();
-  else w.saw = false;
+  else if (w.saw) w.saw--;
   changed();
 });
 $('#clear').addEventListener('click', () => {
   const w = CW();
   w.layers = [];
-  w.saw = false;
+  w.saw = 0;
   changed();
 });
 const ROBES = ['#6b4cff', '#e0457b', '#2bb673', '#f08a24', '#2a9df4', '#8d5b3a'];

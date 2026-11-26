@@ -1016,8 +1016,8 @@ function drawSaw(R, t) {
   ctx.restore();
 }
 function drawFish(r, f, t) {
-  const L = r * 1.7,
-    Hh = r * (f.puff ? 1.25 : f.moon ? 1.3 : 0.95),
+  const L = r * (f.whale ? 2.1 : 1.7),
+    Hh = r * (f.puff ? 1.25 : f.moon ? 1.3 : f.whale ? 1.05 : 0.95),
     w = Math.sin(t * 18) * 0.35;
   ctx.save();
   ctx.translate(-L * 0.85, 0);
@@ -1056,6 +1056,18 @@ function drawFish(r, f, t) {
       ctx.fill();
     }
   }
+  if (f.whale && Math.random() < 0.3)
+    part(
+      'drop',
+      ctx.getTransform().e / scale,
+      ctx.getTransform().f / scale - r,
+      rnd(-60, 60),
+      rnd(-260, -160),
+      0.8,
+      4,
+      '#bfe6ff',
+      { g: 700 }
+    );
   if (f.shark) {
     ctx.fillStyle = f.f;
     ctx.beginPath();
@@ -1162,7 +1174,12 @@ function drawProj(p) {
       }
       ctx.restore();
     }
-    if (k.saw && !S.has('sawfish')) drawSaw(k.body === 'saw' ? r * 1.35 : r * 1.7, t);
+    if (k.saw && !S.has('sawfish'))
+      for (let q = k.saw; q >= 1; q--)
+        drawSaw(
+          (k.body === 'saw' ? r * 1.35 : r * 1.7) * (1 + 0.3 * (q - 1)),
+          t * (q % 2 ? 1 : -1)
+        );
     if (k.body === 'square') {
       ctx.rotate(t * 3);
       const w = r * 2.2,

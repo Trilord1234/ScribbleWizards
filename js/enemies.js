@@ -135,7 +135,7 @@ function zoneFx(e, dt, isMage) {
   for (const z of G.zones) {
     if (isMage && z.own === e.wz) continue;
     const d = Math.hypot(e.x - z.x, e.y - e.h / 2 - z.y);
-    if (z.t === 'slow' && d < z.r) sf = 0.25;
+    if (z.t === 'slow' && d < z.r) sf *= Math.pow(0.25, 0.6 + 0.4 * (z.pow || 1));
     if (z.t === 'hole' && d < z.r) {
       if (!isMage && e.kind !== 'golem') {
         e.x += ((z.x - e.x) / (d + 1)) * 260 * dt;
@@ -144,12 +144,12 @@ function zoneFx(e, dt, isMage) {
       if (d < 90) dmgEnemy(e, 14 * dt, null, true);
     }
     if (z.t === 'poison' && d < z.r + e.rad * 0.5) {
-      dmgEnemy(e, 10 * dt, null, true);
+      dmgEnemy(e, 10 * (z.pow || 1) * dt, null, true);
       if (Math.random() < 0.1)
         part('dot', e.x + rnd(-15, 15), e.y - e.h, 0, -40, 0.6, 3, '#8dff6a');
     }
     if (z.t === 'thorns' && Math.abs(e.x - z.x) < z.r && e.y > GROUND - 40) {
-      sf = Math.min(sf, 0.45);
+      sf *= 0.45;
       dmgEnemy(e, 8 * dt, null, true);
     }
   }
@@ -165,7 +165,8 @@ function upMage(e, dt) {
   }
   if (e.burn > 0) {
     e.burn -= dt;
-    dmgEnemy(e, 6 * dt, null, true);
+    if (e.burn <= 0) e.burnS = 0;
+    dmgEnemy(e, 6 * (e.burnS || 1) * dt, null, true);
     if (Math.random() < 0.6)
       part(
         'fire',
@@ -219,8 +220,9 @@ function upEnemy(e, dt) {
   e.grabCd = Math.max(0, e.grabCd - dt);
   if (e.burn > 0) {
     e.burn -= dt;
-    dmgEnemy(e, 7 * dt, null, true);
-    if (Math.random() < 0.6)
+    if (e.burn <= 0) e.burnS = 0;
+    dmgEnemy(e, 7 * (e.burnS || 1) * dt, null, true);
+    if (Math.random() < 0.4 + 0.1 * (e.burnS || 1))
       part(
         'fire',
         e.x + rnd(-e.w / 2, e.w / 2),
@@ -244,6 +246,7 @@ function upEnemy(e, dt) {
             Math.abs(o.y - e.y) < 120
           ) {
             o.burn = 6;
+            o.burnS = Math.max(1, (e.burnS || 1) - 1);
             o.curse = true;
             for (let i = 0; i < 6; i++)
               part(
