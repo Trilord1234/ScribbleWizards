@@ -24,6 +24,7 @@ function update(dt) {
     }
   });
   G.timeStop = Math.max(0, G.timeStop - dt);
+  G.storm = Math.max(0, (G.storm || 0) - dt * 0.6);
   G.flash = Math.max(0, G.flash - dt * 1.5);
   for (const c of G.cast) c.t += dt;
   G.cast = G.cast.filter(c => c.t < 0.5);

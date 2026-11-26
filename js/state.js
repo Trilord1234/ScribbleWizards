@@ -61,6 +61,8 @@ const G = {
   time: 0,
   steal: 0,
   blood: 0,
+  budget: store.get('sw_budget', 10),
+  duelMap: 0,
   duel: { state: 'idle', t: 0 },
   later: [],
   timeStop: 0,
