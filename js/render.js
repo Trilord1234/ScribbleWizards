@@ -117,7 +117,7 @@ const TW = Array.from({ length: 45 }, () => ({
     c.fill();
   }
 })();
-function drawMoon() {
+function drawMoon(ctx) {
   const b = G.blood,
     col = b > 0.01 ? mix('#fff3cf', '#ff3b4a', b) : '#fff3cf';
   const g = ctx.createRadialGradient(1320, 150, 10, 1320, 150, 230);
@@ -149,30 +149,31 @@ function drawMoon() {
 /* ---------- drawing: props ---------- */
 function cracks(q, w, h, dmg) {
   if (dmg < 0.08) return;
-  const R = seeded(q.seed),
-    n = Math.ceil(dmg * 7);
-  ctx.save();
-  ctx.beginPath();
-  ctx.rect(0, 0, w, h);
-  ctx.clip();
+  const n = Math.ceil(dmg * 7);
+  if (q._cn !== n || q._cw !== w || q._ch !== h) {
+    const R = seeded(q.seed),
+      P = new Path2D();
+    for (let i = 0; i < n; i++) {
+      let x = R() * w,
+        y = R() * h;
+      P.moveTo(x, y);
+      let a = R() * TAU;
+      for (let j = 0; j < 4; j++) {
+        a += R() - 0.5;
+        const L = Math.min(w, h) * (0.18 + R() * 0.25);
+        x = clamp(x + Math.cos(a) * L, 0, w);
+        y = clamp(y + Math.sin(a) * L, 0, h);
+        P.lineTo(x, y);
+      }
+    }
+    q._cp = P;
+    q._cn = n;
+    q._cw = w;
+    q._ch = h;
+  }
   ctx.strokeStyle = 'rgba(30,15,10,.75)';
   ctx.lineWidth = 2;
-  for (let i = 0; i < n; i++) {
-    let x = R() * w,
-      y = R() * h;
-    ctx.beginPath();
-    ctx.moveTo(x, y);
-    let a = R() * TAU;
-    for (let j = 0; j < 4; j++) {
-      a += R() - 0.5;
-      const L = Math.min(w, h) * (0.18 + R() * 0.25);
-      x += Math.cos(a) * L;
-      y += Math.sin(a) * L;
-      ctx.lineTo(x, y);
-    }
-    ctx.stroke();
-  }
-  ctx.restore();
+  ctx.stroke(q._cp);
 }
 function drawProp(q) {
   const w = q.w,
@@ -613,12 +614,12 @@ function drawWizard(w, gy, e) {
     const eye = e && e.loveT > 0 ? '#ff6fae' : '#9dff6a';
     ctx.fillStyle = eye;
     ctx.shadowColor = eye;
-    ctx.shadowBlur = 12;
+    ctx.shadowBlur = Q().glow ? 12 : 0;
     ctx.beginPath();
     ctx.ellipse(0, -94, 3, 2, 0, 0, TAU);
     ctx.ellipse(10, -94, 3, 2, 0, 0, TAU);
     ctx.fill();
-    ctx.shadowBlur = 0;
+    ctx.shadowBlur = Q().glow ? 0 : 0;
   } else {
     ctx.fillStyle = '#ffd9b8';
     ctx.beginPath();
@@ -706,13 +707,13 @@ function drawWizard(w, gy, e) {
       ctx.fill();
       ctx.fillStyle = col;
       ctx.shadowColor = col;
-      ctx.shadowBlur = 14;
+      ctx.shadowBlur = Q().glow ? 14 : 0;
       ctx.fillRect(57, -3, 2.5, 2.5);
       ctx.fillRect(61.5, -3, 2.5, 2.5);
     } else {
       ctx.fillStyle = col;
       ctx.shadowColor = col;
-      ctx.shadowBlur = 16;
+      ctx.shadowBlur = Q().glow ? 16 : 0;
       ctx.beginPath();
       ctx.arc(58, 0, 4 + Math.sin(G.time * 8), 0, TAU);
       ctx.fill();
@@ -946,18 +947,18 @@ function drawEnemy(e) {
     }
     ctx.fillStyle = e.charmed ? '#ff9ad0' : '#62f0dd';
     ctx.shadowColor = ctx.fillStyle;
-    ctx.shadowBlur = 12;
+    ctx.shadowBlur = Q().glow ? 12 : 0;
     ctx.fillRect(-14, -6, 10, 4);
     ctx.fillRect(4, -6, 10, 4);
     ctx.restore();
     const pul = 0.6 + 0.4 * Math.sin(G.time * 5);
     ctx.fillStyle = `rgba(98,240,221,${pul})`;
     ctx.shadowColor = '#62f0dd';
-    ctx.shadowBlur = 18;
+    ctx.shadowBlur = Q().glow ? 18 : 0;
     ctx.beginPath();
     ctx.arc(0, -84, 10, 0, TAU);
     ctx.fill();
-    ctx.shadowBlur = 0;
+    ctx.shadowBlur = Q().glow ? 0 : 0;
     ctx.save();
     ctx.translate(-46, -128);
     cracks({ seed: e.seed }, 92, 90, (1 - e.hp / e.max) * 1.1);
@@ -1036,6 +1037,21 @@ function overlays(e, frozen) {
 }
 
 /* ---------- drawing: projectiles ---------- */
+const GS = new Map();
+function glowSpr(col) {
+  let c = GS.get(col);
+  if (c) return c;
+  c = document.createElement('canvas');
+  c.width = c.height = 64;
+  const x = c.getContext('2d'),
+    g = x.createRadialGradient(32, 32, 0, 32, 32, 32);
+  g.addColorStop(0, hexA(col, 0.5));
+  g.addColorStop(1, hexA(col, 0));
+  x.fillStyle = g;
+  x.fillRect(0, 0, 64, 64);
+  GS.set(col, c);
+  return c;
+}
 function drawSaw(R, t) {
   ctx.save();
   ctx.rotate(t * 25);
@@ -1202,13 +1218,7 @@ function drawProj(p) {
     ctx.save();
     ctx.translate(b[0], b[1]);
     if (c('ghost')) ctx.globalAlpha = 0.6 + 0.15 * Math.sin(t * 10);
-    const gr = ctx.createRadialGradient(0, 0, 0, 0, 0, r * 2.6);
-    gr.addColorStop(0, hexA(col, 0.5));
-    gr.addColorStop(1, hexA(col, 0));
-    ctx.fillStyle = gr;
-    ctx.beginPath();
-    ctx.arc(0, 0, r * 2.6, 0, TAU);
-    ctx.fill();
+    ctx.drawImage(glowSpr(col), -r * 2.6, -r * 2.6, r * 5.2, r * 5.2);
     if (c('gravity')) {
       ctx.save();
       ctx.rotate(t * 4);
@@ -1760,157 +1770,156 @@ function drawZone(z) {
   }
   ctx.restore();
 }
-function drawParticles() {
-  for (const p of G.parts) {
-    const f = p.l / p.ml;
-    ctx.globalAlpha = Math.min(1, f * 1.5);
-    switch (p.t) {
-      case 'spark':
-        ctx.globalCompositeOperation = 'lighter';
-        ctx.fillStyle = p.c;
-        ctx.beginPath();
-        ctx.arc(p.x, p.y, p.s * f + 0.5, 0, TAU);
-        ctx.fill();
-        ctx.globalCompositeOperation = 'source-over';
-        break;
-      case 'fire': {
-        ctx.globalCompositeOperation = 'lighter';
-        const P =
-          p.c === 'blue'
-            ? ['#e8fbff', '#7fc8ff', '#3a6cff']
-            : p.c === 'purple'
-              ? ['#f3d2ff', '#b04dff', '#5a1a9a']
-              : ['#fff3a0', '#ff9a2a', '#e0402a'];
-        ctx.fillStyle = f > 0.6 ? P[0] : f > 0.3 ? P[1] : P[2];
-        ctx.beginPath();
-        ctx.arc(p.x, p.y, p.s * (0.4 + f * 0.6), 0, TAU);
-        ctx.fill();
-        ctx.globalCompositeOperation = 'source-over';
-        break;
-      }
-      case 'smoke':
-        ctx.globalAlpha = f * 0.9;
-        ctx.fillStyle = p.c;
-        ctx.beginPath();
-        ctx.arc(p.x, p.y, p.s * (1.6 - f * 0.6), 0, TAU);
-        ctx.fill();
-        break;
-      case 'snow':
-        ctx.strokeStyle = p.c;
-        ctx.lineWidth = 1.5;
-        ctx.save();
-        ctx.translate(p.x, p.y);
-        ctx.rotate(p.rot);
-        for (let i = 0; i < 3; i++) {
-          ctx.rotate(Math.PI / 3);
-          ctx.beginPath();
-          ctx.moveTo(-p.s, 0);
-          ctx.lineTo(p.s, 0);
-          ctx.stroke();
-        }
-        ctx.restore();
-        break;
-      case 'heart':
-        ctx.fillStyle = p.c;
-        ctx.save();
-        ctx.translate(p.x, p.y);
-        heartPath(ctx, p.s * 1.6);
-        ctx.fill();
-        ctx.restore();
-        break;
-      case 'chunk':
-      case 'leaf':
-        ctx.fillStyle = p.c;
-        ctx.save();
-        ctx.translate(p.x, p.y);
-        ctx.rotate(p.rot);
-        if (p.t === 'leaf') {
-          ctx.beginPath();
-          ctx.ellipse(0, 0, p.s, p.s * 0.5, 0, 0, TAU);
-          ctx.fill();
-        } else ctx.fillRect(-p.w / 2, -p.h / 2, p.w, p.h);
-        ctx.restore();
-        break;
-      case 'straw':
-        ctx.strokeStyle = p.c;
-        ctx.lineWidth = 2;
-        ctx.save();
-        ctx.translate(p.x, p.y);
-        ctx.rotate(p.rot);
-        ctx.beginPath();
-        ctx.moveTo(-p.s / 2, 0);
-        ctx.lineTo(p.s / 2, 0);
-        ctx.stroke();
-        ctx.restore();
-        break;
-      case 'ring':
-        ctx.strokeStyle = p.c;
-        ctx.lineWidth = 6 * f;
-        ctx.beginPath();
-        ctx.ellipse(p.x, p.y, p.s * (1.2 - f), p.s * (1.2 - f) * 0.3, 0, 0, TAU);
-        ctx.stroke();
-        break;
-      case 'seed':
-      case 'drop':
-      case 'dot':
-        ctx.fillStyle = p.c;
-        ctx.beginPath();
-        ctx.arc(p.x, p.y, p.s, 0, TAU);
-        ctx.fill();
-        break;
-      case 'star':
-        ctx.globalCompositeOperation = 'lighter';
-        ctx.fillStyle = p.c;
-        ctx.save();
-        ctx.translate(p.x, p.y);
-        ctx.rotate(p.rot);
-        starPath(ctx, p.s * f + 1, p.s * f * 0.35 + 0.4, 4);
-        ctx.fill();
-        ctx.restore();
-        ctx.globalCompositeOperation = 'source-over';
-        break;
-      case 'streak':
-        ctx.strokeStyle = p.c;
-        ctx.lineWidth = p.s * 0.5 * f;
-        ctx.beginPath();
-        ctx.moveTo(p.x, p.y);
-        ctx.lineTo(p.x - Math.cos(p.a) * p.s * 4, p.y - Math.sin(p.a) * p.s * 4);
-        ctx.stroke();
-        break;
-      case 'zz':
-        ctx.globalAlpha = f;
-        outlined(
-          'z',
-          p.x,
-          p.y,
-          p.c,
-          '900 ' + ((p.s * (1.4 - f * 0.6)) | 0) + 'px Nunito, sans-serif',
-          'center',
-          3
-        );
-        break;
-      case 'sring':
-        ctx.strokeStyle = p.c;
-        ctx.lineWidth = 4 * f;
-        ctx.beginPath();
-        ctx.arc(p.x, p.y, p.s * (1 - f) + 6, 0, TAU);
-        ctx.stroke();
-        break;
-      case 'fly':
-        ctx.globalCompositeOperation = 'lighter';
-        ctx.globalAlpha = 0.4 + 0.6 * Math.abs(Math.sin(G.time * 3 + p.x));
-        ctx.fillStyle = p.c;
-        ctx.beginPath();
-        ctx.arc(p.x, p.y, 2.4, 0, TAU);
-        ctx.fill();
-        ctx.globalAlpha *= 0.3;
-        ctx.beginPath();
-        ctx.arc(p.x, p.y, 7, 0, TAU);
-        ctx.fill();
-        ctx.globalCompositeOperation = 'source-over';
-        break;
+const LIGHT = new Set(['spark', 'fire', 'star', 'fly']);
+function drawPart(p, m) {
+  const f = p.l / p.ml;
+  ctx.globalAlpha = Math.min(1, f * 1.5);
+  switch (p.t) {
+    case 'spark':
+      ctx.fillStyle = p.c;
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, p.s * f + 0.5, 0, TAU);
+      ctx.fill();
+      break;
+    case 'fire': {
+      const P =
+        p.c === 'blue'
+          ? ['#e8fbff', '#7fc8ff', '#3a6cff']
+          : p.c === 'purple'
+            ? ['#f3d2ff', '#b04dff', '#5a1a9a']
+            : ['#fff3a0', '#ff9a2a', '#e0402a'];
+      ctx.fillStyle = f > 0.6 ? P[0] : f > 0.3 ? P[1] : P[2];
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, p.s * (0.4 + f * 0.6), 0, TAU);
+      ctx.fill();
+      break;
     }
+    case 'star':
+      ctx.fillStyle = p.c;
+      ctx.translate(p.x, p.y);
+      ctx.rotate(p.rot);
+      starPath(ctx, p.s * f + 1, p.s * f * 0.35 + 0.4, 4);
+      ctx.fill();
+      ctx.setTransform(m);
+      break;
+    case 'fly':
+      ctx.globalAlpha = 0.4 + 0.6 * Math.abs(Math.sin(G.time * 3 + p.x));
+      ctx.fillStyle = p.c;
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, 2.4, 0, TAU);
+      ctx.fill();
+      ctx.globalAlpha *= 0.3;
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, 7, 0, TAU);
+      ctx.fill();
+      break;
+    case 'smoke':
+      ctx.globalAlpha = f * 0.9;
+      ctx.fillStyle = p.c;
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, p.s * (1.6 - f * 0.6), 0, TAU);
+      ctx.fill();
+      break;
+    case 'snow':
+      ctx.strokeStyle = p.c;
+      ctx.lineWidth = 1.5;
+      ctx.translate(p.x, p.y);
+      ctx.rotate(p.rot);
+      ctx.beginPath();
+      for (let i = 0; i < 3; i++) {
+        const a = (i * Math.PI) / 3,
+          cx = Math.cos(a) * p.s,
+          sy = Math.sin(a) * p.s;
+        ctx.moveTo(-cx, -sy);
+        ctx.lineTo(cx, sy);
+      }
+      ctx.stroke();
+      ctx.setTransform(m);
+      break;
+    case 'heart':
+      ctx.fillStyle = p.c;
+      ctx.translate(p.x, p.y);
+      heartPath(ctx, p.s * 1.6);
+      ctx.fill();
+      ctx.setTransform(m);
+      break;
+    case 'chunk':
+      ctx.fillStyle = p.c;
+      ctx.translate(p.x, p.y);
+      ctx.rotate(p.rot);
+      ctx.fillRect(-p.w / 2, -p.h / 2, p.w, p.h);
+      ctx.setTransform(m);
+      break;
+    case 'leaf':
+      ctx.fillStyle = p.c;
+      ctx.translate(p.x, p.y);
+      ctx.rotate(p.rot);
+      ctx.beginPath();
+      ctx.ellipse(0, 0, p.s, p.s * 0.5, 0, 0, TAU);
+      ctx.fill();
+      ctx.setTransform(m);
+      break;
+    case 'straw':
+      ctx.strokeStyle = p.c;
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      const sc = (Math.cos(p.rot) * p.s) / 2,
+        ss = (Math.sin(p.rot) * p.s) / 2;
+      ctx.moveTo(p.x - sc, p.y - ss);
+      ctx.lineTo(p.x + sc, p.y + ss);
+      ctx.stroke();
+      break;
+    case 'ring':
+      ctx.strokeStyle = p.c;
+      ctx.lineWidth = 6 * f;
+      ctx.beginPath();
+      ctx.ellipse(p.x, p.y, p.s * (1.2 - f), p.s * (1.2 - f) * 0.3, 0, 0, TAU);
+      ctx.stroke();
+      break;
+    case 'seed':
+    case 'drop':
+    case 'dot':
+      ctx.fillStyle = p.c;
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, p.s, 0, TAU);
+      ctx.fill();
+      break;
+    case 'streak':
+      ctx.strokeStyle = p.c;
+      ctx.lineWidth = p.s * 0.5 * f;
+      ctx.beginPath();
+      ctx.moveTo(p.x, p.y);
+      ctx.lineTo(p.x - Math.cos(p.a) * p.s * 4, p.y - Math.sin(p.a) * p.s * 4);
+      ctx.stroke();
+      break;
+    case 'zz':
+      ctx.globalAlpha = f;
+      outlined(
+        'z',
+        p.x,
+        p.y,
+        p.c,
+        '900 ' + ((p.s * (1.4 - f * 0.6)) | 0) + 'px Nunito, sans-serif',
+        'center',
+        3
+      );
+      break;
+    case 'sring':
+      ctx.strokeStyle = p.c;
+      ctx.lineWidth = 4 * f;
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, p.s * (1 - f) + 6, 0, TAU);
+      ctx.stroke();
+      break;
   }
+}
+function drawParticles() {
+  const m = ctx.getTransform();
+  ctx.lineCap = 'round';
+  for (const p of G.parts) if (!LIGHT.has(p.t)) drawPart(p, m);
+  ctx.globalCompositeOperation = 'lighter';
+  for (const p of G.parts) if (LIGHT.has(p.t)) drawPart(p, m);
+  ctx.globalCompositeOperation = 'source-over';
   ctx.globalAlpha = 1;
 }
 function outlined(s, x, y, col, font, align = 'left', lw = 5) {
@@ -2058,8 +2067,6 @@ function render() {
   ctx.clearRect(0, 0, W, H);
   ctx.save();
   if (sk > 0) ctx.translate(rnd(-sk, sk) * 0.6, rnd(-sk, sk) * 0.6);
-  ctx.drawImage(BG, 0, 0);
-  drawMoon();
   for (const s of TW) {
     ctx.globalAlpha = 0.25 + 0.75 * Math.abs(Math.sin(G.time * s.v + s.p));
     ctx.fillStyle = '#fff';
@@ -2101,7 +2108,7 @@ function render() {
       ctx.fillRect(-38, -40, 76, 5);
       ctx.fillRect(-5, -50, 10, 20);
       ctx.shadowColor = '#ffd76e';
-      ctx.shadowBlur = 20;
+      ctx.shadowBlur = Q().glow ? 20 : 0;
       ctx.fillRect(-36, -38, 72, 2);
       ctx.restore();
       if (Math.random() < 0.3)
@@ -2132,13 +2139,13 @@ function render() {
   for (const b of G.bolts) {
     ctx.strokeStyle = b.dk ? '#e6c8ff' : '#fffbd0';
     ctx.shadowColor = b.dk ? '#b04dff' : '#fff59a';
-    ctx.shadowBlur = 14;
+    ctx.shadowBlur = Q().glow ? 14 : 0;
     ctx.lineWidth = 3;
     ctx.globalAlpha = Math.min(1, b.l * 5);
     ctx.beginPath();
     b.pts.forEach((q, i) => (i ? ctx.lineTo(q[0], q[1]) : ctx.moveTo(q[0], q[1])));
     ctx.stroke();
-    ctx.shadowBlur = 0;
+    ctx.shadowBlur = Q().glow ? 0 : 0;
     ctx.globalAlpha = 1;
   }
   for (const c of G.cast) {

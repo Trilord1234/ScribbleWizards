@@ -121,6 +121,7 @@ function changed() {
   saveW(CW());
   renderLayers();
   renderReading();
+  G.needDraw = true;
 }
 function renderLayers() {
   const w = CW(),
@@ -253,16 +254,15 @@ function renderReading() {
           ? 'Niveau ' + seen[k] + ' « ' + pal[0] + ' » : ' + pal[1] + '.'
           : (w.dark && DSTK[k] ? DSTK[k] : 'encore plus fort') + '.');
     }
-    if (w.dark && DARK[k]) li.style.color = '#d9a6ff';
-    if (seen[k] > 1) li.style.color = '#7cf2c8';
+    if (w.dark && DARK[k]) li.className = 'dkl';
+    if (seen[k] > 1) li.className = 'lv';
     ol.append(li);
   });
   el.append(ol);
   const multi = Object.entries(spec.n).filter(([k, v]) => v > 1);
   if (multi.length) {
     const d = document.createElement('div');
-    d.className = 'syn';
-    d.style.color = '#7cf2c8';
+    d.className = 'stk';
     d.textContent =
       '⇈ Empilés : ' + multi.map(([k, v]) => symName(k, w.dark) + ' x' + v).join(', ');
     el.append(d);
@@ -277,7 +277,7 @@ function renderReading() {
   }
 }
 function renderBook() {
-  const el = $('#book');
+  const el = $('#synbook');
   el.textContent = '';
   $('#syncount').textContent = '(' + discovered.size + '/' + SYN.length + ')';
   SYN.forEach(s => {
@@ -424,7 +424,7 @@ function renderWizard() {
   const w = CW();
   if (document.activeElement !== wn) wn.value = w.name;
   $('#darkbtn').textContent = w.dark ? 'Redevenir mage blanc' : 'Devenir mage noir';
-  $('#workshop').classList.toggle('is-dark', w.dark);
+  $('#tome').classList.toggle('is-dark', w.dark);
   document.querySelectorAll('.robe').forEach(b => b.classList.toggle('on', b.dataset.c === w.robe));
   renderTabs();
   buildPalette();
@@ -442,14 +442,14 @@ function updUI() {
     b.disabled = s === 'count' || s === 'fight';
     b.textContent = s === 'end' ? 'Revanche !' : s === 'idle' ? 'Lancer le duel' : 'Duel en cours…';
     $('#help').textContent =
-      "Duel : choisissez « Sorcier 1 » ou « Sorcier 2 » dans l'atelier pour dessiner le cercle de chacun (et devenir mage noir si vous voulez), puis lancez le duel. Les sorciers visent et tirent tout seuls. On peut changer les cercles pendant le combat !";
+      "Duel : touchez le petit cercle d'un sorcier en haut de l'écran (ou « Ouvrir le grimoire ») pour dessiner son cercle, puis lancez le duel. Les sorciers visent et tirent tout seuls. Le jeu se met en pause quand le grimoire est ouvert. Touche G = grimoire.";
   } else {
     b.disabled = G.waveActive;
     b.textContent = G.waveActive
       ? 'Vague ' + G.wave + ' en cours…'
       : 'Lancer la vague ' + (G.wave + 1);
     $('#help').textContent =
-      "Vise avec la souris ou le doigt, clique pour lancer le sort. Reste appuyé pour tirer en rafale. Barre espace = tirer. Les objets se fissurent puis se cassent, et les monstres s'arrêtent pour taper sur ce qui leur bloque le passage.";
+      'Vise avec la souris ou le doigt, clique pour lancer le sort, reste appuyé pour tirer en rafale (ou barre espace). Touche le cercle en haut à droite, le bouton Grimoire ou la touche G pour modifier ton sort : le jeu se met en pause pendant ce temps.';
   }
   renderTabs();
 }
@@ -485,6 +485,77 @@ function setMode(m) {
   renderWizard();
   updUI();
 }
+const bookov = $('#bookov');
+let bookOpen = false,
+  lastFocus = null;
+function openBook(i) {
+  if (i != null && (i === 0 || G.mode === 'duel')) ed = i;
+  bookOpen = true;
+  G.paused = true;
+  G.firing = false;
+  lastFocus = document.activeElement;
+  bookov.hidden = false;
+  renderWizard();
+  sizePreview();
+  sfx('click');
+  setTimeout(() => $('#closeb').focus(), 30);
+}
+function closeBook() {
+  if (!bookOpen) return;
+  bookOpen = false;
+  bookov.hidden = true;
+  G.paused = false;
+  last = performance.now();
+  sfx('click');
+  if (lastFocus && lastFocus.focus) lastFocus.focus();
+}
+$('#bookbtn').addEventListener('click', () => openBook());
+$('#bookbtn2').addEventListener('click', () => openBook());
+$('#closeb').addEventListener('click', closeBook);
+$('#closego').addEventListener('click', closeBook);
+bookov.addEventListener('pointerdown', e => {
+  if (e.target === bookov) closeBook();
+});
+$('#circlebox').addEventListener('click', () => {
+  const w = CW();
+  if (w.layers.length) {
+    w.layers.pop();
+    sfx('remove');
+    changed();
+  }
+});
+document.querySelectorAll('.ptab').forEach(t =>
+  t.addEventListener('click', () => {
+    document.querySelectorAll('.ptab').forEach(x => x.classList.toggle('on', x === t));
+    for (const v of ['draw', 'syn', 'grim']) $('#p-' + v).hidden = v !== t.dataset.p;
+    sfx('click');
+  })
+);
+window.addEventListener('keydown', e => {
+  if (e.key === 'Escape' && bookOpen) {
+    e.preventDefault();
+    closeBook();
+    return;
+  }
+  if ((e.key === 'g' || e.key === 'G') && !(e.target instanceof HTMLInputElement)) {
+    e.preventDefault();
+    bookOpen ? closeBook() : openBook();
+  }
+});
+const qb = $('#qual');
+function qLabel() {
+  qb.textContent = 'Qualité : ' + (qMode === 'auto' ? 'Auto (' + Q().n + ')' : Q().n);
+}
+qb.addEventListener('click', () => {
+  const order = ['auto', 'haute', 'normale', 'rapide'];
+  qMode = order[(order.indexOf(qMode) + 1) % 4];
+  if (qMode !== 'auto') qLvl = qMode;
+  store.set('sw_q', qMode);
+  CC.clear();
+  resize();
+  qLabel();
+});
+qLabel();
 $('#mArena').addEventListener('click', () => {
   if (G.mode !== 'arena') setMode('arena');
 });
