@@ -14,6 +14,7 @@ function setupDuel() {
   }
 }
 function startDuel() {
+  G.later = [];
   G.projs = [];
   G.zones = [];
   G.pickups = [];
@@ -27,6 +28,8 @@ function duelEnd(loser) {
   if (G.duel.state !== 'fight') return;
   G.duel.state = 'end';
   const win = WZ[1 - loser.wz.i];
+  sfx('ko');
+  later(0.5, () => sfx('fanfare'));
   banner(
     win.name + ' gagne !',
     (win.dark ? 'La magie noire' : 'La magie blanche') + " l'emporte. Revanche ?"

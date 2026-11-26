@@ -149,7 +149,117 @@ const DSTK = {
   hourglass: 'tire vite plus longtemps',
   egg: "plus d'araignées",
 };
-const stkDesc = (k, dk) => (dk && DSTK[k] ? DSTK[k] : STK[k]);
+const STACK_LEVELS = {
+  heart: [
+    ['Cœurs collants', 'les monstres touchés restent collés un instant'],
+    ['Câlin géant', 'le monstre touché devient gentil et rentre chez lui'],
+  ],
+  square: [
+    ['Onde de choc', "BOUM autour du point d'impact"],
+    ['Chantier', 'un mur de béton se construit là où il tombe'],
+  ],
+  triangle: [
+    ['Prisme', "se sépare en 3 balles à l'impact"],
+    ['Triple tir', "la baguette tire 3 sorts d'un coup"],
+  ],
+  saw: [
+    ['Ricochet', 'la scie rebondit sur les murs'],
+    ['Boomerang', 'la scie revient vers le sorcier en recoupant tout'],
+  ],
+  mountain: [
+    ['Rocher roulant', 'roule par terre en écrasant tout'],
+    ['Météore', "gros cratère qui brûle à l'impact"],
+  ],
+  gravity: [
+    ['Pluie de météores', 'des cailloux enflammés tombent du ciel'],
+    ['Séisme', 'la terre tremble et assomme les monstres au sol'],
+  ],
+  flame: [
+    ['Flaque de feu', 'laisse un feu par terre qui brûle ceux qui marchent dedans'],
+    ['Explosion de feu', 'grosse explosion qui enflamme tout autour'],
+  ],
+  snow: [
+    ['Patinoire', 'laisse une plaque de glace qui ralentit'],
+    ['Blizzard', 'une tempête de neige qui gèle tout dans la zone'],
+  ],
+  bite: [
+    ['Croqueur de murs', 'croque à travers les murs et les caisses'],
+    ['Glouton géant', "avale les petits monstres d'un coup : GLOUPS !"],
+  ],
+  ghost: [
+    ['Passe-muraille', 'traverse aussi les monstres'],
+    ['Hantise', "les monstres ont peur et s'enfuient"],
+  ],
+  zigzag: [
+    ['Dédoublement', 'se sépare en 2 en plein vol'],
+    ['Triplement', 'se sépare en 3 en plein vol'],
+  ],
+  dots: [
+    ['Plombs rebondissants', 'les petites balles rebondissent'],
+    ['Mitraillette', 'une deuxième gerbe part juste après'],
+  ],
+  arrow: [
+    ['Perce-tout', 'traverse plus de choses'],
+    ['Mur du son', 'BANG supersonique qui repousse tout'],
+  ],
+  fish: [
+    ['Banc de poissons', "deux petits poissons l'accompagnent"],
+    ['Baleine', 'une baleine ! Elle fait une grosse vague'],
+  ],
+  egg: [
+    ['Poussins', 'les morceaux deviennent des poussins qui rebondissent'],
+    ["Œuf d'or", "en plus, des pièces d'or tombent"],
+  ],
+  cushion: [
+    ['Plumes', 'chaque coup fait voler des plumes et étourdit'],
+    ['Oreiller magique', 'endort les monstres : Zzz…'],
+  ],
+  tree: [
+    ['Petite forêt', 'deux arbres poussent'],
+    ['Arbre géant', 'un arbre énorme qui bloque les monstres'],
+  ],
+  coin: [
+    ["Pluie d'or", 'des pièces tombent du ciel'],
+    ['Coffre au trésor', 'un coffre que tous les monstres veulent ouvrir'],
+  ],
+  wall: [
+    ['Rangée de murs', 'plusieurs murs côte à côte'],
+    ['Forteresse', 'des remparts de château'],
+  ],
+  star: [
+    ["Double feu d'artifice", 'explose deux fois'],
+    ['Supernova', "éclair blanc qui touche tout l'écran"],
+  ],
+  bolt: [
+    ['Chaîne', 'saute sur plus de cibles'],
+    ['Orage', 'la foudre tombe du ciel sur plusieurs monstres'],
+  ],
+  magnet: [
+    ['Aimant à monstres', "attire les monstres au point d'impact"],
+    ['Super aimant', 'attire encore plus loin'],
+  ],
+  bubble: [
+    ['Grosse bulle', 'la bulle dure plus longtemps'],
+    ['Aquarium', 'attrape tous les monstres autour dans des bulles'],
+  ],
+  hourglass: [
+    ['Temps très lent', 'zone plus grande et plus lente'],
+    ['Arrêt du temps', "tout s'arrête pendant quelques secondes !"],
+  ],
+};
+const LV = (spec, n) => (spec.dark && DARK[n] ? 0 : spec.n[n] || 0);
+const stkDesc = (k, dk) =>
+  dk && DARK[k]
+    ? DSTK[k] || 'plus fort'
+    : 'x2 ' +
+      STACK_LEVELS[k][0][0] +
+      ' (' +
+      STACK_LEVELS[k][0][1] +
+      '), x3 ' +
+      STACK_LEVELS[k][1][0] +
+      ' (' +
+      STACK_LEVELS[k][1][1] +
+      ')';
 const DARK = {
   heart: {
     n: 'Cœur noir',

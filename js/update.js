@@ -11,6 +11,18 @@ function update(dt) {
     w0.recoil = Math.max(0, w0.recoil - dt * 5);
     w0.hurt = Math.max(0, w0.hurt - dt);
   } else upDuel(dt);
+  for (const l of G.later) l.t -= dt;
+  const due = G.later.filter(l => l.t <= 0);
+  G.later = G.later.filter(l => l.t > 0);
+  due.forEach(l => {
+    try {
+      l.fn();
+    } catch (e) {
+      console.error(e);
+    }
+  });
+  G.timeStop = Math.max(0, G.timeStop - dt);
+  G.flash = Math.max(0, G.flash - dt * 1.5);
   for (const c of G.cast) c.t += dt;
   G.cast = G.cast.filter(c => c.t < 0.5);
   for (const p of G.projs) if (!p.dead) upProj(p, dt);
@@ -93,6 +105,10 @@ function update(dt) {
       c.x += c.vx * dt;
       c.y += c.vy * dt;
       if (c.y >= GROUND - 10) {
+        if (c.chest && c.vy > 300) {
+          G.shake = Math.max(G.shake, 8);
+          sfx('thud');
+        }
         c.y = GROUND - 10;
         if (Math.abs(c.vy) < 120) {
           c.ground = true;
@@ -121,6 +137,30 @@ function update(dt) {
   }
   for (const z of G.zones) {
     z.l -= dt;
+    if (z.t === 'blizzard')
+      for (let i = 0; i < 3; i++)
+        part(
+          'snow',
+          z.x + rnd(-z.r, z.r),
+          z.y - 160 + rnd(0, 60),
+          rnd(-160, -60),
+          rnd(80, 200),
+          1.4,
+          rnd(3, 6),
+          '#ffffff',
+          { vr: rnd(-4, 4) }
+        );
+    if (z.t === 'fire' && Math.random() < 0.5)
+      part(
+        'fire',
+        z.x + rnd(-z.r, z.r),
+        GROUND - 5,
+        rnd(-10, 10),
+        rnd(-120, -40),
+        0.5,
+        rnd(6, 12),
+        'orange'
+      );
     if (z.t === 'hole' && Math.random() < 0.7) {
       const a = Math.random() * TAU;
       part(
