@@ -1,0 +1,98 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Scribble Wizards</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Cinzel+Decorative:wght@700;900&family=Nunito:wght@600;800;900&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="css/style.css" />
+  </head>
+  <body>
+    <header>
+      <h1>Scribble Wizards</h1>
+      <p>Dessine ton cercle, ajoute des symboles, et lance ton sort !</p>
+    </header>
+    <main>
+      <section class="arena-col">
+        <div class="arena" id="arena">
+          <canvas id="game"></canvas>
+          <div class="overlay" id="overlay" hidden>
+            <div>
+              <strong>Ton sorcier est tout étourdi !</strong>
+              <p>Les monstres sont passés… On recommence ?</p>
+              <button class="btn primary" id="again">Rejouer</button>
+            </div>
+          </div>
+        </div>
+        <div class="bar card">
+          <button class="btn primary" id="wave">Lancer la vague 1</button>
+          <button class="btn" id="rebuild">Reconstruire l'arène</button>
+          <button class="btn" id="mute">Son : oui</button>
+          <label>Sorcier <input type="text" id="wname" value="Merlin" maxlength="14" /></label>
+          <div class="robes" id="robes" aria-label="Couleur de la robe"></div>
+        </div>
+        <p class="help">
+          Vise avec la souris ou le doigt, clique pour lancer le sort. Reste appuyé pour tirer en
+          rafale. Barre espace = tirer. Les objets se fissurent puis se cassent, et les monstres
+          s'arrêtent pour taper sur ce qui leur bloque le passage.
+        </p>
+        <div class="card">
+          <h2>Livre des synergies <span id="syncount"></span></h2>
+          <p class="help" style="margin-bottom: 10px">
+            Certains dessins posés <b>juste l'un après l'autre</b> (de l'extérieur vers l'intérieur)
+            créent un sort spécial. L'ordre compte ! Tire le sort pour le découvrir.
+          </p>
+          <div class="book" id="book"></div>
+        </div>
+      </section>
+
+      <section class="card workshop">
+        <h2>L'atelier du cercle</h2>
+        <div class="circlebox"><canvas id="cv"></canvas></div>
+        <div class="reading" id="reading"></div>
+        <div class="row">
+          <button class="btn" id="undo">Retirer le dernier</button
+          ><button class="btn" id="clear">Effacer le cercle</button>
+        </div>
+        <h3>Les dessins des cousins</h3>
+        <div class="palette" id="palette"></div>
+        <h3>Dessins bonus <small>(inventés en plus)</small></h3>
+        <div class="palette" id="palette2"></div>
+        <p class="hint" id="hint">Touche un dessin pour l'ajouter à l'intérieur du cercle.</p>
+        <h3>Ordre du cercle <small>extérieur → intérieur</small></h3>
+        <ol class="layers" id="layers"></ol>
+        <h3>Grimoire</h3>
+        <div class="row">
+          <input type="text" id="spellname" placeholder="Nom du sort" maxlength="24" /><button
+            class="btn"
+            id="save"
+          >
+            Ranger le sort
+          </button>
+        </div>
+        <div class="chips" id="grim" style="margin-top: 10px"></div>
+      </section>
+    </main>
+
+    <script src="js/data.js"></script>
+    <script src="js/utils.js"></script>
+    <script src="js/magic-circle.js"></script>
+    <script src="js/spells.js"></script>
+    <script src="js/state.js"></script>
+    <script src="js/audio.js"></script>
+    <script src="js/effects.js"></script>
+    <script src="js/arena.js"></script>
+    <script src="js/projectiles.js"></script>
+    <script src="js/props.js"></script>
+    <script src="js/enemies.js"></script>
+    <script src="js/update.js"></script>
+    <script src="js/render.js"></script>
+    <script src="js/input.js"></script>
+    <script src="js/ui.js"></script>
+    <script src="js/main.js"></script>
+  </body>
+</html>

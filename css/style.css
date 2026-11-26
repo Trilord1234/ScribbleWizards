@@ -1,0 +1,420 @@
+/* Scribble Wizards — styles
+   Look: a wizard's picture book at night: deep violet, grimoire gold and cyan sparkles
+   (violet and poison green for the dark mage).
+   Fonts: Cinzel Decorative for titles, Nunito for text. */
+:root {
+  color-scheme: dark;
+  --bg: #120d2b;
+  --panel: #1d1644;
+  --panel2: #261d57;
+  --ink: #f4eeff;
+  --mute: #bcb0e4;
+  --gold: #f6c453;
+  --cyan: #62f0dd;
+  --pink: #ff6fae;
+  --line: #3d3080;
+}
+* {
+  box-sizing: border-box;
+  min-width: 0;
+}
+body {
+  margin: 0;
+  background: radial-gradient(1200px 700px at 75% -10%, #2f2073, transparent 70%), var(--bg);
+  color: var(--ink);
+  font:
+    16px/1.5 Nunito,
+    system-ui,
+    sans-serif;
+  overflow-x: clip;
+  min-height: 100vh;
+}
+header {
+  padding: 18px max(3vw, 14px) 4px;
+  display: flex;
+  align-items: baseline;
+  gap: 6px 18px;
+  flex-wrap: wrap;
+}
+h1 {
+  font:
+    900 clamp(26px, 3.4vw, 42px) / 1.05 'Cinzel Decorative',
+    serif;
+  margin: 0;
+  color: var(--gold);
+  text-shadow: 0 0 22px #f6c45366;
+}
+header p {
+  margin: 0;
+  color: var(--mute);
+}
+h2 {
+  font:
+    700 21px/1.2 'Cinzel Decorative',
+    serif;
+  color: var(--gold);
+  margin: 0 0 10px;
+}
+h3 {
+  font:
+    800 16px/1.2 Nunito,
+    sans-serif;
+  margin: 16px 0 8px;
+  color: #e8dcff;
+}
+h3 small {
+  font-weight: 600;
+  color: var(--mute);
+  font-size: 14px;
+}
+main {
+  display: grid;
+  grid-template-columns: minmax(0, 380px) minmax(0, 1fr);
+  gap: 16px;
+  padding: 10px max(3vw, 14px) 34px;
+  align-items: start;
+}
+.workshop {
+  order: 1;
+}
+.arena-col {
+  order: 2;
+  display: grid;
+  gap: 12px;
+}
+@media (max-width: 960px) {
+  main {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .arena-col {
+    order: 1;
+  }
+  .workshop {
+    order: 2;
+  }
+}
+.card {
+  background: linear-gradient(180deg, var(--panel2), var(--panel));
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  padding: 16px;
+}
+.arena {
+  position: relative;
+  aspect-ratio: 16/9;
+  border-radius: 18px;
+  overflow: hidden;
+  border: 2px solid #57449f;
+  box-shadow:
+    0 0 0 5px #19123d,
+    0 24px 60px #0009;
+  touch-action: none;
+  cursor: crosshair;
+  background: #0b0826;
+}
+.arena canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+.overlay {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  background: #0c0820b8;
+  text-align: center;
+  padding: 20px;
+}
+.overlay[hidden] {
+  display: none;
+}
+.overlay strong {
+  display: block;
+  font:
+    900 clamp(22px, 3vw, 38px) / 1.1 'Cinzel Decorative',
+    serif;
+  color: var(--gold);
+  margin-bottom: 8px;
+}
+.circlebox {
+  position: relative;
+  aspect-ratio: 1;
+  max-width: 330px;
+  margin: 0 auto;
+}
+.circlebox canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+.reading {
+  background: #140f33;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 10px 12px;
+  margin-top: 10px;
+  font-size: 15px;
+  color: #e5dcff;
+}
+.reading ol {
+  margin: 4px 0 0;
+  padding-left: 22px;
+}
+.reading li {
+  margin: 2px 0;
+}
+.reading .syn {
+  color: var(--gold);
+  font-weight: 800;
+  margin-top: 6px;
+}
+.reading .empty {
+  color: var(--mute);
+}
+.palette {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(78px, 1fr));
+  gap: 7px;
+}
+.sym {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 7px 4px 6px;
+  border-radius: 12px;
+  border: 1px solid var(--line);
+  background: #191340;
+  color: var(--ink);
+  font:
+    700 13px/1.15 Nunito,
+    sans-serif;
+  cursor: pointer;
+  text-align: center;
+  min-height: 76px;
+}
+.sym:hover,
+.sym:focus-visible {
+  background: #2a2068;
+  border-color: var(--gold);
+  outline: none;
+}
+.sym.on {
+  border-color: var(--gold);
+  box-shadow: inset 0 0 0 1px var(--gold);
+}
+.sym canvas {
+  width: 38px;
+  height: 38px;
+}
+.hint {
+  color: var(--mute);
+  font-size: 14px;
+  margin: 8px 0 0;
+  min-height: 2.6em;
+}
+.layers {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 6px;
+}
+.layers li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: #171139;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 5px 6px 5px 10px;
+}
+.layers li.ext {
+  border-style: dashed;
+  border-color: #8b86a8;
+}
+.layers .num {
+  font-weight: 900;
+  color: var(--gold);
+  width: 1.6em;
+  text-align: right;
+  flex: none;
+}
+.layers canvas {
+  width: 30px;
+  height: 30px;
+  flex: none;
+}
+.layers .nm {
+  flex: 1;
+  font-weight: 700;
+}
+.mini {
+  width: 34px;
+  height: 34px;
+  border-radius: 9px;
+  border: 1px solid var(--line);
+  background: #231a55;
+  color: var(--ink);
+  font: 800 16px Nunito;
+  cursor: pointer;
+  flex: none;
+}
+.mini:hover {
+  border-color: var(--gold);
+}
+button {
+  font-family: Nunito, sans-serif;
+}
+.btn {
+  min-height: 44px;
+  padding: 0 16px;
+  border-radius: 12px;
+  border: 1px solid var(--line);
+  background: #2a2068;
+  color: var(--ink);
+  font: 800 15px Nunito;
+  cursor: pointer;
+}
+.btn:hover {
+  border-color: var(--gold);
+}
+.btn:disabled {
+  opacity: 0.55;
+  cursor: default;
+}
+.btn.primary {
+  background: linear-gradient(180deg, #ffd76e, #e8a92a);
+  color: #2a1a00;
+  border-color: #ffe39a;
+}
+.row {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: 10px;
+}
+.row > * {
+  flex: 1 1 auto;
+}
+input[type='text'] {
+  min-height: 44px;
+  border-radius: 12px;
+  border: 1px solid var(--line);
+  background: #130e31;
+  color: var(--ink);
+  font: 700 16px Nunito;
+  padding: 0 12px;
+}
+input:focus-visible,
+.btn:focus-visible,
+.mini:focus-visible {
+  outline: 2px solid var(--cyan);
+  outline-offset: 2px;
+}
+.bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+  padding: 12px;
+}
+.bar label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 800;
+}
+.bar input {
+  width: 150px;
+}
+.robes {
+  display: flex;
+  gap: 6px;
+}
+.robe {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  border: 2px solid #fff3;
+  cursor: pointer;
+}
+.robe.on {
+  border-color: #fff;
+  box-shadow: 0 0 0 2px var(--gold);
+}
+.help {
+  margin: 0;
+  color: var(--mute);
+  font-size: 15px;
+}
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.chip {
+  display: flex;
+  align-items: center;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: #1b1446;
+  overflow: hidden;
+}
+.chip button {
+  background: none;
+  border: 0;
+  color: var(--ink);
+  font: 700 14px Nunito;
+  padding: 8px 12px;
+  cursor: pointer;
+  min-height: 38px;
+}
+.chip button.x {
+  padding: 8px 10px;
+  color: var(--mute);
+  border-left: 1px solid var(--line);
+}
+.chip button:hover {
+  background: #2a2068;
+}
+.book {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+  gap: 8px;
+}
+.entry {
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 9px 11px;
+  background: #161036;
+}
+.entry b {
+  color: var(--gold);
+  display: block;
+}
+.entry .rec {
+  font-size: 14px;
+  color: var(--cyan);
+  font-weight: 800;
+}
+.entry p {
+  margin: 2px 0 0;
+  font-size: 14px;
+  color: #ddd2ff;
+}
+.entry.lock b {
+  color: #8f86b8;
+}
+.entry.lock .rec {
+  color: #8f86b8;
+}
+@media (prefers-reduced-motion: reduce) {
+  * {
+    scroll-behavior: auto;
+  }
+}
