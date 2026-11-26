@@ -338,6 +338,41 @@ const STACK_LEVELS = {
     ['Potion arc-en-ciel', "tous les effets d'un coup"],
   ],
 };
+const COST = {
+  heart: 3,
+  square: 2,
+  triangle: 2,
+  saw: 3,
+  mountain: 2,
+  gravity: 2,
+  flame: 2,
+  snow: 2,
+  bite: 2,
+  ghost: 2,
+  zigzag: 1,
+  dots: 3,
+  arrow: 1,
+  fish: 2,
+  egg: 2,
+  cushion: 1,
+  tree: 1,
+  coin: 1,
+  wall: 2,
+  star: 3,
+  bolt: 3,
+  magnet: 2,
+  bubble: 2,
+  hourglass: 3,
+  bomb: 3,
+  portal: 3,
+  shield: 3,
+  note: 2,
+  cloud: 2,
+  tornado: 3,
+  web: 2,
+  potion: 2,
+};
+const spellCost = w => w.layers.reduce((a, k) => a + (COST[k] || 1), 0) + 3 * (w.saw | 0);
 const LV = (spec, n) => (spec.dark && DARK[n] ? 0 : spec.n[n] || 0);
 const stkDesc = (k, dk) =>
   dk && DARK[k]

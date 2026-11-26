@@ -64,11 +64,19 @@
             ><button class="segb" id="mDuel" type="button">Duel</button>
           </div>
           <button class="btn primary" id="wave" type="button">Lancer la vague 1</button>
+          <div class="seg" id="budget" hidden>
+            <span class="seglab">Magie</span><button class="segb" data-b="6" type="button">6</button
+            ><button class="segb" data-b="10" type="button">10</button
+            ><button class="segb" data-b="15" type="button">15</button
+            ><button class="segb" data-b="20" type="button">20</button
+            ><button class="segb" data-b="0" type="button">Libre</button>
+          </div>
           <button class="btn" id="rebuild" type="button">Reconstruire l'arène</button>
           <button class="btn leather" id="bookbtn2" type="button">Ouvrir le grimoire</button>
           <button class="btn" id="mute" type="button">Bruitages : oui</button>
           <button class="btn" id="music" type="button">Musique : oui</button>
           <button class="btn" id="qual" type="button">Qualité : Auto</button>
+          <button class="btn" id="fs" type="button">Plein écran</button>
         </div>
         <p class="help" id="help"></p>
       </div>
@@ -81,6 +89,29 @@
           ><button class="tab" data-i="1" type="button" hidden></button>
         </div>
         <button class="closeb" id="closeb" type="button" aria-label="Fermer le grimoire">✕</button>
+        <div class="cover" id="cover" hidden aria-hidden="true">
+          <div class="front">
+            <svg viewBox="0 0 100 100">
+              <g fill="none" stroke="currentColor" stroke-width="2.2">
+                <circle cx="50" cy="50" r="46" />
+                <circle cx="50" cy="50" r="41" />
+                <circle cx="50" cy="50" r="22" />
+                <path
+                  d="M50 9 61 39 91 39 67 57 76 87 50 69 24 87 33 57 9 39 39 39Z"
+                  stroke-width="1.6"
+                />
+              </g>
+              <g fill="currentColor">
+                <circle cx="50" cy="4" r="2.5" />
+                <circle cx="96" cy="50" r="2.5" />
+                <circle cx="50" cy="96" r="2.5" />
+                <circle cx="4" cy="50" r="2.5" />
+              </g>
+            </svg>
+            <div>Grimoire<small id="covername"></small></div>
+          </div>
+          <div class="back"></div>
+        </div>
         <section class="page left">
           <h2>Le cercle magique</h2>
           <div class="who">
@@ -93,6 +124,7 @@
             </button>
           </div>
           <div class="robes" id="robes" aria-label="Couleur de la robe"></div>
+          <div class="mana" id="mana" hidden></div>
           <div class="circlebox" id="circlebox" title="Clique pour retirer le dernier dessin">
             <canvas id="cv"></canvas>
           </div>
