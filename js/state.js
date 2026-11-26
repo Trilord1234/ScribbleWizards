@@ -67,3 +67,14 @@ const G = {
   flash: 0,
 };
 const later = (t, fn) => G.later.push({ t, fn });
+const QUAL = {
+  haute: { dpr: 2, parts: 1700, glow: true, txt: 60, n: 'Haute' },
+  normale: { dpr: 1.25, parts: 1000, glow: true, txt: 45, n: 'Normale' },
+  rapide: { dpr: 0.8, parts: 450, glow: false, txt: 30, n: 'Rapide' },
+};
+const QORDER = ['haute', 'normale', 'rapide'];
+let qMode = store.get('sw_q', 'auto');
+if (qMode !== 'auto' && !QUAL[qMode]) qMode = 'auto';
+let qLvl = qMode === 'auto' ? 'normale' : qMode;
+const Q = () => QUAL[qLvl];
+const FPS = { acc: 0, n: 0, good: 0, fps: 60 };
