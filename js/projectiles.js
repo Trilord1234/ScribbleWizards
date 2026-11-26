@@ -45,6 +45,7 @@ function makeProj(spec, x, y, a, o = {}) {
   else if (c('fish') >= 3) fish = WHALE;
   if (S.has('puffer')) fish = FISH[3];
   if (LV(spec, 'arrow') >= 2) pierce += 2;
+  if (fish === WHALE && spec.body === 'fish') r = Math.min(r * 1.6, 110);
   return {
     spec,
     owner: o.owner || null,
@@ -130,7 +131,7 @@ function nearestEnemy(x, y, R, own) {
 
 function aimInfo(w) {
   const sx = w.x + 12 * w.side,
-    sy = GROUND - 72;
+    sy = (G.mode === 'duel' && w.ent ? w.ent.y : GROUND) - 72;
   let a;
   if (G.mode === 'arena' && w === WZ[0]) {
     a = Math.atan2(G.aim.y - sy, G.aim.x - sx);
@@ -1461,22 +1462,19 @@ function applyStackLevels(p, x, y, why) {
     const tg = G.enemies
       .filter(e => isFoe(e, own))
       .sort(() => Math.random() - 0.5)
-      .slice(0, 4);
+      .slice(0, 5);
+    txt(x, y - 60, 'ORAGE !', '#fff59a', 44);
+    G.storm = 1.6;
     tg.forEach((e, i) =>
-      later(i * 0.15, () => {
+      later(0.2 + i * 0.24, () => {
         if (e.dead || e.ko) return;
-        G.bolts.push({
-          pts: jag(e.x + rnd(-40, 40), -20, e.x, e.y - e.h / 2),
-          l: 0.35,
-          dk: k.dark,
-        });
-        dmgEnemy(e, 25, e.x);
-        e.stun = Math.max(e.stun || 0, 0.8);
-        G.flash = 0.25;
-        sfx('thunder');
+        skyBolt(e.x + rnd(-8, 8), e.y - e.h / 2, k.dark);
+        dmgEnemy(e, 32, e.x);
+        e.stun = Math.max(e.stun || 0, 1);
       })
     );
-    if (tg.length) txt(x, y - 50, 'ORAGE !', '#fff59a', 36);
+    if (!tg.length) later(0.2, () => skyBolt(x, GROUND, k.dark));
+    else later(0.2 + tg.length * 0.24, () => skyBolt(x + rnd(-150, 150), GROUND, k.dark));
   }
   if (lv('magnet') >= 2)
     G.zones.push({
@@ -1897,6 +1895,63 @@ function upZone(z, dt) {
         );
     }
   }
+}
+function skyBolt(x, y, dk) {
+  const n = 16,
+    pts = [[x + rnd(-120, 120), -40]];
+  let cx = pts[0][0];
+  for (let i = 1; i <= n; i++) {
+    const cy = -40 + ((y + 40) * i) / n;
+    cx += (x - cx) / (n - i + 1) + rnd(-42, 42) * (i < n ? 1 : 0);
+    if (i === n) cx = x;
+    pts.push([cx, cy]);
+  }
+  const br = [];
+  for (let b = 0; b < 5; b++) {
+    const st = pts[2 + ((Math.random() * (n - 5)) | 0)];
+    let bx = st[0],
+      by = st[1];
+    const bp = [[bx, by]];
+    const dir = Math.random() < 0.5 ? -1 : 1;
+    for (let j = 0; j < 5; j++) {
+      bx += dir * rnd(15, 55);
+      by += rnd(25, 55);
+      bp.push([bx, by]);
+    }
+    br.push(bp);
+  }
+  G.bolts.push({ pts, br, l: 0.55, ml: 0.55, sky: true, dk });
+  G.flash = Math.max(G.flash, 0.6);
+  G.shake = Math.max(G.shake, 18);
+  sfx('thunder');
+  sfx('boom');
+  const gy = Math.min(y + 30, GROUND);
+  for (let i = 0; i < 28; i++)
+    part(
+      'spark',
+      x,
+      gy,
+      rnd(-420, 420),
+      rnd(-480, -60),
+      rnd(0.3, 0.8),
+      rnd(3, 7),
+      dk ? '#e0b8ff' : '#fffbd0',
+      { g: 900 }
+    );
+  part('sring', x, gy, 0, 0, 0.5, 150, dk ? '#c27bff' : '#fff59a');
+  chips(x, GROUND, '#3a2a1a', 12, true);
+  for (let i = 0; i < 8; i++)
+    part(
+      'smoke',
+      x + rnd(-30, 30),
+      GROUND - 10,
+      rnd(-60, 60),
+      rnd(-120, -30),
+      1.2,
+      rnd(14, 26),
+      'rgba(60,55,70,.55)'
+    );
+  G.zones.push({ t: 'scorch', x, y: GROUND, r: 60, l: 4, ml: 4, dk });
 }
 function addChest(x) {
   G.pickups.push({

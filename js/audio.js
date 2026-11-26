@@ -189,6 +189,14 @@ function sfx(type, arg = 1) {
       case 'click':
         tone(1200, 900, 0.04, 'sine', 0.04);
         break;
+      case 'clash':
+        tone(1400, 380, 0.14, 'square', 0.04);
+        noise(0.12, 4500, 0.09);
+        break;
+      case 'page':
+        noise(0.35, 2400, 0.07);
+        tone(300, 600, 0.3, 'sine', 0.03);
+        break;
       case 'note': {
         const f = [523, 587, 659, 784, 880][(Math.random() * 5) | 0];
         tone(f, f, 0.25, 'triangle', 0.07);
