@@ -19,11 +19,13 @@ const toWorld = e => {
 arena.addEventListener('pointerdown', e => {
   if (e.target.closest('.overlay')) return;
   G.aim = toWorld(e);
+  sfx('');
+  if (G.mode !== 'arena') return;
   G.firing = true;
   try {
     arena.setPointerCapture(e.pointerId);
   } catch (_) {}
-  if (G.cd <= 0) fire();
+  if (WZ[0].cd <= 0 && !G.over) fire(WZ[0]);
 });
 arena.addEventListener('pointermove', e => {
   G.aim = toWorld(e);
@@ -32,8 +34,8 @@ const stop = () => (G.firing = false);
 arena.addEventListener('pointerup', stop);
 arena.addEventListener('pointercancel', stop);
 window.addEventListener('keydown', e => {
-  if (e.code === 'Space' && !(e.target instanceof HTMLInputElement)) {
+  if (e.code === 'Space' && !(e.target instanceof HTMLInputElement) && G.mode === 'arena') {
     e.preventDefault();
-    if (G.cd <= 0) fire();
+    if (WZ[0].cd <= 0 && !G.over) fire(WZ[0]);
   }
 });

@@ -48,6 +48,10 @@ function sfx(type) {
         tone(420, 980, 0.16, 'sine', 0.06);
         tone(840, 1500, 0.12, 'triangle', 0.03, 0.03);
         break;
+      case 'dcast':
+        tone(300, 90, 0.25, 'sawtooth', 0.04);
+        tone(150, 60, 0.25, 'sine', 0.06);
+        break;
       case 'hit':
         tone(220, 90, 0.09, 'square', 0.04);
         noise(0.06, 1800, 0.05);
@@ -92,8 +96,15 @@ function sfx(type) {
       case 'pop':
         tone(600, 1400, 0.06, 'sine', 0.06);
         break;
+      case 'evil':
+        tone(200, 100, 0.5, 'sawtooth', 0.05);
+        tone(203, 98, 0.5, 'sawtooth', 0.05);
+        break;
       case 'win':
         [523, 659, 784, 1047].forEach((f, i) => tone(f, f, 0.18, 'triangle', 0.06, i * 0.09));
+        break;
+      case 'tick':
+        tone(880, 880, 0.1, 'square', 0.04);
         break;
     }
   } catch (e) {}
