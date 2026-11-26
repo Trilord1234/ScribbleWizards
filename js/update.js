@@ -23,7 +23,7 @@ function update(dt) {
     if (q.rise < 1) q.rise = Math.min(1, q.rise + dt * 2.2);
     if (q.burn > 0) {
       q.burn -= dt;
-      q.hp -= 5 * dt;
+      q.hp -= 5 * (q.burnS || 1) * dt;
       if (Math.random() < 0.5)
         part(
           'fire',
@@ -146,7 +146,7 @@ function update(dt) {
         'rgba(120,255,90,.25)'
       );
     if (z.l <= 0 && z.boom) {
-      aoe(z.x, z.y, 150, 30, 350, z.own);
+      aoe(z.x, z.y, 150, 30 * z.boom, 350, z.own);
       for (let i = 0; i < 40; i++)
         part(
           'spark',
